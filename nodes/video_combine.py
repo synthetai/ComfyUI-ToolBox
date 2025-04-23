@@ -67,29 +67,21 @@ class VideoCombineNode:
                     extended_video = self._extend_video_loop(video_file, audio_duration, temp_dir)
                     self._merge_audio_video(extended_video, audio_file, output_path)
         
-        # 确保输出路径是绝对路径，并检查文件是否存在
-        abs_path = os.path.abspath(output_path)
-        print(f"最终输出文件路径: {abs_path}")
+        # 使用最终的绝对路径
+        final_path = os.path.abspath(output_path)
         
-        if os.path.exists(abs_path):
-            print(f"文件已成功生成: {abs_path}")
+        # 检查文件是否已经成功生成
+        if os.path.exists(final_path):
+            print(f"文件已成功生成: {final_path}")
         else:
-            print(f"警告: 文件未找到: {abs_path}")
+            print(f"警告: 文件未找到: {final_path}")
                 
-        # 返回生成的文件绝对路径，确保是字符串类型
-        result = str(abs_path)
-        # 检查返回值是否合法
-        if result == "/" or not result.startswith("/"):
-            # 如果路径不正确，则使用硬编码备选路径 
-            print(f"检测到无效路径: {result}，尝试使用硬编码路径")
-            comfyui_output_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            comfyui_output_dir = os.path.join(comfyui_output_dir, "..", "output")
-            comfyui_output_dir = os.path.abspath(comfyui_output_dir)
-            result = os.path.join(comfyui_output_dir, output_filename)
-            result = os.path.abspath(result)
-            print(f"使用硬编码备选路径: {result}")
-            
-        return result
+        # 调试信息
+        print(f"最终返回路径: {final_path}")
+        
+        # ComfyUI节点需要返回元组，即使只有一个值
+        # 这是关键修改，确保返回的是元组而不是单个字符串
+        return (final_path,)
     
     def _generate_filename(self, output_dir, prefix):
         """生成不会重复的递增编号文件名"""
