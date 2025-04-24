@@ -1,94 +1,110 @@
 # ComfyUI-ToolBox
 
-ComfyUI-ToolBox是一个为ComfyUI提供实用工具节点的扩展包。当前包含音视频处理和文件上传等功能节点。
+A utility node extension for ComfyUI providing various tools for video processing and file management.
 
-## 功能节点
+[中文文档 (Chinese Documentation)](README_CN.md)
+
+## Overview
+
+ComfyUI-ToolBox extends ComfyUI with specialized nodes for:
+- Combining audio and video files with various synchronization methods
+- Uploading files to AWS S3 storage with flexible directory structures
+
+## Nodes
 
 ### Video Combine
 
-Video Combine节点用于将音频文件合并到视频文件中，适合作为工作流的最后一个节点使用。
+The Video Combine node merges audio and video files, ideal as the final node in your workflow.
 
-**功能特点：**
-- 输入一个视频文件和一个音频文件
-- 合并音频到视频中
-- 提供多种处理长音频的方式（截断音频、交替播放视频、循环播放视频）
-- 可自定义输出文件名前缀
-- 合并后的视频将保存到ComfyUI的output目录下
+**Features:**
+- Combines an input video with an audio file
+- Offers multiple methods for handling longer audio (cutting, bounce playback, looping)
+- Customizable output filename prefix
+- Saves combined videos to ComfyUI's output directory
 
-**节点参数：**
-- `video_file`: 输入视频文件的路径
-- `audio_file`: 输入音频文件的路径
-- `filename_prefix`: 输出文件名前缀，默认为"output"
-- `audio_handling`: 当音频比视频长时的处理方式：
-  - `cut off audio`: 截断音频使其与视频时长保持一致
-  - `bounce video`: 使用正向/反向交替播放视频来匹配音频长度（默认）
-  - `loop video`: 循环重复播放视频来匹配音频长度
+**Input Parameters:**
+- `video_file`: Path to the input video file
+- `audio_file`: Path to the input audio file
+- `filename_prefix`: Output filename prefix, defaults to "output"
+- `audio_handling`: Strategy for audio longer than video:
+  - `cut off audio`: Truncate audio to match video duration
+  - `bounce video`: Alternate forward/reverse video playback to match audio length (default)
+  - `loop video`: Repeat video from start to match audio length
 
-**输出：**
-- `video_path`: 合并后视频文件的绝对路径
+**Output:**
+- `video_path`: Absolute path to the merged video file
 
 ### AWS S3 Upload
 
-AWS S3 Upload节点用于将本地文件上传到Amazon S3存储服务中。
+The AWS S3 Upload node uploads local files to Amazon S3 storage service.
 
-**功能特点：**
-- 支持将任何类型的本地文件上传到AWS S3存储桶
-- 灵活配置存储路径，支持父目录和子目录结构
-- 自动处理目录层次结构
-- 支持指定AWS区域
-- 返回上传后的S3文件路径
+**Features:**
+- Supports uploading any local file type to AWS S3 buckets
+- Flexible path configuration with parent and sub-directory structure
+- Automatic directory hierarchy management
+- AWS region specification support
+- Returns the S3 path after successful upload
 
-**节点参数：**
-- `bucket`: AWS S3存储桶名称
-- `access_key`: AWS访问密钥ID
-- `secret_key`: AWS秘密访问密钥
-- `region`: AWS区域名称（默认为"us-east-1"）
-- `parent_directory`: 存储桶内的父目录路径（可选）
-- `file_path`: 要上传的本地文件绝对路径
-- `sub_dir_name` (可选): 在父目录下的子目录名称，如设置则文件将存储在子目录下
+**Input Parameters:**
+- `bucket`: AWS S3 bucket name
+- `access_key`: AWS access key ID
+- `secret_key`: AWS secret access key
+- `region`: AWS region name (defaults to "us-east-1")
+- `parent_directory`: Parent directory path within the bucket (optional)
+- `file_path`: Absolute path to the local file for upload
+- `sub_dir_name` (optional): Sub-directory name within the parent directory
 
-**目录结构规则：**
-- 如果`parent_directory`和`sub_dir_name`都有值，文件将存储在`bucket/parent_directory/sub_dir_name/`下
-- 如果只有`parent_directory`有值，文件将存储在`bucket/parent_directory/`下
-- 如果只有`sub_dir_name`有值，文件将存储在`bucket/sub_dir_name/`下
-- 如果两者都没有值，文件将直接存储在存储桶根目录
+**Directory Structure Rules:**
+- If both `parent_directory` and `sub_dir_name` have values, files are stored under `bucket/parent_directory/sub_dir_name/`
+- If only `parent_directory` has a value, files are stored under `bucket/parent_directory/`
+- If only `sub_dir_name` has a value, files are stored under `bucket/sub_dir_name/`
+- If neither has a value, files are stored directly in the bucket root
 
-**输出：**
-- `s3_file_path`: 上传后文件在S3中的路径（格式：s3://bucket/path/to/file）
+**Output:**
+- `s3_file_path`: The path to the uploaded file in S3 (format: s3://bucket/path/to/file)
 
-## 安装方法
+## Installation
 
-1. 确保您已安装ComfyUI
-2. 确保系统已安装FFmpeg（用于音视频处理）
-3. 安装Python依赖：`pip install boto3`（用于AWS S3上传）
-4. 将此仓库克隆到ComfyUI的`custom_nodes`目录下:
+1. Ensure you have ComfyUI installed
+2. Make sure FFmpeg is installed on your system (required for video processing)
+3. Clone this repository to your ComfyUI's `custom_nodes` directory:
 ```
 cd ComfyUI/custom_nodes
 git clone https://github.com/yourusername/ComfyUI-ToolBox.git
 ```
-5. 重启ComfyUI
-6. 在ComfyUI界面中，应该能在"ToolBox"分类下找到相应的节点
+4. Install the required Python dependencies:
+```
+cd ComfyUI-ToolBox
+pip install -r requirements.txt
+```
+5. Restart ComfyUI
+6. The nodes should be available under the "ToolBox" category in the ComfyUI interface
 
-## 依赖项
+## Dependencies
 
-- FFmpeg - 用于音视频处理
-- boto3 - 用于AWS S3文件上传
-- Python 3.8+
+The main dependencies are listed in `requirements.txt`, including:
+- boto3 - For AWS S3 file uploads
+- FFmpeg - For video processing (requires system-level installation)
+- Additional Python libraries - See requirements.txt for details
 
-## 使用示例
+## Usage Examples
 
-### Video Combine节点使用示例
-1. 在ComfyUI工作流中，添加"Video Combine"节点（在ToolBox/Video Combine分类下）
-2. 设置输入的视频文件和音频文件路径
-3. 设置输出文件名前缀
-4. 选择当音频比视频长时的处理方式（cut off audio、bounce video或loop video）
-5. 运行工作流，获取合并后的视频文件路径
-6. 合并后的视频将保存在ComfyUI的output目录下
+### Video Combine Node
+1. Add the "Video Combine" node to your ComfyUI workflow (under ToolBox/Video Combine category)
+2. Set the input video and audio file paths
+3. Set the output filename prefix
+4. Choose the audio handling method (cut off audio, bounce video, or loop video)
+5. Run the workflow to get the merged video file path
+6. The combined video will be saved in ComfyUI's output directory
 
-### AWS S3 Upload节点使用示例
-1. 在ComfyUI工作流中，添加"AWS S3 Upload"节点（在ToolBox/AWS S3分类下）
-2. 输入您的AWS S3存储桶名称、访问密钥和秘密密钥
-3. 选择正确的AWS区域（如"us-east-1"、"eu-west-1"等）
-4. 设置父目录路径（可选）和子目录名称（可选）来定义存储结构
-5. 输入要上传的本地文件路径
-6. 运行工作流，获取上传后的S3文件路径
+### AWS S3 Upload Node
+1. Add the "AWS S3 Upload" node to your ComfyUI workflow (under ToolBox/AWS S3 category)
+2. Enter your AWS S3 bucket name, access key, and secret key
+3. Select the correct AWS region (e.g., "us-east-1", "eu-west-1", etc.)
+4. Set parent directory path (optional) and sub-directory name (optional) to define storage structure
+5. Enter the local file path to upload
+6. Run the workflow to get the S3 file path after upload
+
+## License
+
+This project is released under the MIT License.
