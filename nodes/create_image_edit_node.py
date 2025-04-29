@@ -20,6 +20,12 @@ class CreateImageEditNode:
     RETURN_TYPES = ("IMAGE", "STRING",)
     RETURN_NAMES = ("image", "response",)
     FUNCTION = "edit_image"
+    VERSION = "1.0"
+    DESCRIPTION = """使用 OpenAI API 编辑图像。
+支持 DALL-E-2 和 GPT-Image-1 模型。
+通过调整 inputcount 并点击 Update inputs 按钮可添加多个图像输入。
+注意：DALL-E-2 只支持单张图像输入，GPT-Image-1 支持多张图像。
+"""
     
     @classmethod
     def INPUT_TYPES(cls):
