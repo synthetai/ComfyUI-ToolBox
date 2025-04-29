@@ -29,11 +29,6 @@ class CreateImageEditNode:
                 "quality": (["auto", "standard", "high", "medium", "low"], {"default": "auto"}),
                 "response_format": (["url", "b64_json"], {"default": "b64_json"}),
                 "user": ("STRING", {"default": "", "multiline": False, "placeholder": "A unique identifier representing your end-user"})
-            },
-            "hidden": {
-                "update_inputs": ("BOOLEAN", {"default": False}),
-                "prompt": "PROMPT",
-                "extra_pnginfo": "EXTRA_PNGINFO",
             }
         }
 
@@ -46,71 +41,20 @@ Edit or extend images using OpenAI's API (DALL-E-2 and GPT-Image-1 models).
 You can set how many image inputs the node has,
 with the **inputcount** parameter and clicking "Update inputs".
 Note: DALL-E-2 only supports a single input image.
-GPT-Image-1 supports up to 4 input images.
+GPT-Image-1 works best with up to 4 input images, but will accept more.
 """
 
     @classmethod
     def IS_CHANGED(cls, **kwargs):
         return float("NaN")
     
-    # 定义更新按钮和节点钩子
+    # 定义验证函数
     @classmethod
     def VALIDATE_INPUTS(cls, **kwargs):
         return True
 
-    # 为UI添加按钮
-    def getCustomWidgets(self):
-        return {"update_inputs": {"widget_type": "button", "text": "Update inputs", "function": "updateInputs"}}
-
-    # 更新输入接口的函数
-    def updateInputs(self, update_inputs=False, **kwargs):
-        prompt = kwargs["prompt"]
-        extra_pnginfo = kwargs.get("extra_pnginfo", {})
-        inputcount = kwargs.get("inputcount", 1)
-
-        # 获取当前节点ID
-        workflow = extra_pnginfo.get("workflow", {})
-        node_id = None
-        for node_id, node_data in workflow.items():
-            if node_data.get("class_type") == self.__class__.__name__:
-                # 找到当前节点
-                node_inputs = node_data.get("inputs", {})
-                # 检查是否有inputcount参数，确认是否是当前节点
-                if "inputcount" in node_inputs:
-                    node_id = node_id
-                    break
-
-        if node_id is None:
-            print("无法找到当前节点ID，无法更新输入")
-            return {"result": "ERROR: 无法找到当前节点ID，无法更新输入"}
-        
-        # 创建动态输入
-        dynamic_inputs = {}
-        for i in range(1, inputcount + 1):
-            if i == 1:  # 第一个输入已经存在于required中
-                continue
-            dynamic_inputs[f"image_{i}"] = ["IMAGE"]
-        
-        # 更新工作流
-        if node_id in workflow:
-            if "dynamic_inputs" not in workflow[node_id]:
-                workflow[node_id]["dynamic_inputs"] = {}
-            workflow[node_id]["dynamic_inputs"] = dynamic_inputs
-            
-            # 删除不再需要的动态输入连接
-            current_connections = {}
-            if "dynamic_connections" in workflow[node_id]:
-                current_connections = workflow[node_id]["dynamic_connections"].copy()
-                
-            for conn_key in list(current_connections.keys()):
-                # 例如 conn_key 可能是 "image_2" 或 "image_3" 等
-                if conn_key.startswith("image_") and int(conn_key.split("_")[1]) > inputcount:
-                    workflow[node_id]["dynamic_connections"].pop(conn_key, None)
-        
-        return {"result": f"更新了图像输入数量到 {inputcount}"}
-
     def edit_image(self, api_key, inputcount, image_1, prompt, mask=None, model="gpt-image-1", n=1, size="1024x1024", 
-                   quality="auto", response_format="b64_json", user="", update_inputs=False, **kwargs):
+                   quality="auto", response_format="b64_json", user="", **kwargs):
         print(f"图像编辑, prompt: {prompt}")
         
         # 验证输入参数
@@ -158,10 +102,9 @@ GPT-Image-1 supports up to 4 input images.
             print(f"警告: DALL-E-2 模型仅支持一张输入图像，将只使用第一张图像")
             images = images[:1]
         
-        # 对于 GPT-Image-1，最多支持 4 张输入图像
+        # 对于 GPT-Image-1，如果超过 4 张输入图像，给出一个提示但不限制
         if model == "gpt-image-1" and len(images) > 4:
-            print(f"警告: GPT-Image-1 模型最多支持 4 张输入图像，将只使用前 4 张图像")
-            images = images[:4]
+            print(f"注意: GPT-Image-1 模型推荐使用不超过 4 张输入图像，当前提供了 {len(images)} 张图像")
         
         print(f"使用 {len(images)} 张输入图像")
         
