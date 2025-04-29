@@ -58,11 +58,44 @@ The Save Image node specifically designed to handle and save OpenAI's image data
 **Node Parameters:**
 - `b64_json`: Base64-encoded image data from OpenAI
 - `filename_prefix`: Prefix for the saved file name (default: "openai")
+- `output_dir`: Custom output directory (optional, uses ComfyUI's default output directory if empty)
 
 **Output:**
 - `filename`: Path to the saved image file
 - `image`: The image as a ComfyUI image object (ready for preview or further processing)
 - `mask`: Alpha channel mask (if present in the image, otherwise returns an empty mask)
+
+### Edit Image (OpenAI)
+
+The Edit Image node allows you to edit or extend existing images using OpenAI's API, supporting both DALL-E-2 and GPT-Image-1 models.
+
+**Features:**
+- Takes an existing image and modifies it based on a text prompt
+- Support for multiple input images (up to 4) when using GPT-Image-1 model
+- Optional mask support to specify areas to be edited
+- Supports both DALL-E-2 and GPT-Image-1 models
+- Handles image format conversion and size requirements automatically
+- Automatic retries for API rate limits and errors
+- Returns multiple images when requested (n parameter)
+
+**Node Parameters:**
+- Required Parameters:
+  - `api_key`: OpenAI API key
+  - `image`: Input image(s) to be edited (as ComfyUI IMAGE type). For GPT-Image-1, you can connect up to 4 images; for DALL-E-2, only the first image will be used
+  - `prompt`: Text description of the desired modifications (max length: 32000 chars for GPT-Image-1, 1000 chars for DALL-E-2)
+
+- Optional Parameters:
+  - `mask`: Optional mask to specify which areas to edit (transparent areas in the mask indicate regions to modify)
+  - `model`: Model to use, one of "gpt-image-1" or "dall-e-2" (default: "gpt-image-1")
+  - `n`: Number of images to generate, range 1-10
+  - `size`: Image dimensions (default: "1024x1024")
+  - `quality`: Image quality, options vary by model (default: "auto")
+  - `response_format`: Return format, one of "url" or "b64_json" (default: "b64_json")
+  - `user`: User identifier for tracking and monitoring
+
+**Output:**
+- `image`: The edited image(s), returned as an image object in ComfyUI
+- `b64_json`: The base64-encoded image data that can be passed to the Save Image node
 
 ### Video Combine
 

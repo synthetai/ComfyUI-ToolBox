@@ -56,11 +56,44 @@ Create Image 节点用于调用 OpenAI 的 API 生成图像，支持 DALL-E 和 
 **节点参数：**
 - `b64_json`: 来自 OpenAI 的 Base64 编码图像数据
 - `filename_prefix`: 保存文件名的前缀（默认为 "openai"）
+- `output_dir`: 自定义输出目录（可选，如果为空则使用 ComfyUI 默认输出目录）
 
 **输出：**
 - `filename`: 保存的图像文件路径
 - `image`: 作为 ComfyUI 图像对象的图像（可直接用于预览或进一步处理）
 - `mask`: Alpha 通道 mask（如果图像中存在 alpha 通道，否则返回空 mask）
+
+### Edit Image (OpenAI)
+
+Edit Image 节点用于使用 OpenAI 的 API 编辑或扩展现有图像，支持 DALL-E-2 和 GPT-Image-1 模型。
+
+**功能特点：**
+- 接收一个现有图像并根据文本提示词进行修改
+- 使用 GPT-Image-1 模型时支持多图像输入（最多 4 张）
+- 支持可选掩码来指定需要编辑的区域
+- 支持 DALL-E-2 和 GPT-Image-1 模型
+- 自动处理图像格式转换和尺寸要求
+- 自动重试 API 限流和错误
+- 支持生成多张图像（通过 n 参数）
+
+**节点参数：**
+- 必填参数：
+  - `api_key`: OpenAI API 密钥
+  - `image`: 要编辑的输入图像（作为 ComfyUI IMAGE 类型）。对于 GPT-Image-1，可以连接最多 4 张图像；对于 DALL-E-2，只会使用第一张图像
+  - `prompt`: 期望修改的文本描述（最大长度：GPT-Image-1 为 32000 字符，DALL-E-2 为 1000 字符）
+
+- 可选参数：
+  - `mask`: 可选掩码，用于指定要编辑的区域（掩码中的透明区域表示要修改的区域）
+  - `model`: 使用的模型，可选 "gpt-image-1" 或 "dall-e-2"（默认为 "gpt-image-1"）
+  - `n`: 生成图像数量，范围 1-10
+  - `size`: 图像尺寸（默认为 "1024x1024"）
+  - `quality`: 图像质量，选项根据模型而不同（默认为 "auto"）
+  - `response_format`: 返回格式，可选 "url" 或 "b64_json"（默认为 "b64_json"）
+  - `user`: 用户标识符，用于跟踪和监控
+
+**输出：**
+- `image`: 编辑后的图像，作为 ComfyUI 中的图像对象返回
+- `b64_json`: Base64 编码的图像数据，可传递给保存图像节点
 
 ### Video Combine
 
