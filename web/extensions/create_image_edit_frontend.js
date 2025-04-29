@@ -6,13 +6,25 @@ app.registerExtension({
   name: "toolbox.openai.image_edit_dynamic_inputs",
 
   async beforeRegisterNodeDef(nodeType, nodeData) {
-    if (nodeData.name !== "CreateImageEditNode") return;
+    // 打印节点信息以便调试
+    console.log("检查节点:", nodeData.name, nodeData.type, nodeData.comfyClass);
+    
+    // 按照注册名称匹配，而不是类名
+    if (nodeData.name !== "CreateImageEditNode" && 
+        nodeData.type !== "CreateImageEditNode" && 
+        nodeData.comfyClass !== "CreateImageEditNode") {
+      return;
+    }
+    
+    console.log("找到 CreateImageEditNode 节点，准备添加 Update inputs 按钮");
 
     // ============ 实例级工具函数 ============
     nodeType.prototype.updateImageInputs = function () {
       // 读取想要的输入数量
       const desired = this.widgets.find(w => w.name === "inputcount")?.value ?? 1;
       const current = this.inputs.filter(i => /^image_\d+$/.test(i.name)).length;
+      
+      console.log(`updateImageInputs: 当前 ${current} 个输入，目标 ${desired} 个输入`);
 
       // 1) 删除多余的
       for (let idx = this.inputs.length - 1; idx >= 0; idx--) {
@@ -37,6 +49,7 @@ app.registerExtension({
     // ============ 创建时插入控件 ============
     const originalCreated = nodeType.prototype.onNodeCreated ?? (() => {});
     nodeType.prototype.onNodeCreated = function () {
+      console.log("CreateImageEditNode 实例创建，添加控件");
       originalCreated.apply(this, arguments);
 
       // inputcount 控件（int slider）
@@ -56,6 +69,8 @@ app.registerExtension({
         () => this.updateImageInputs()
       );
       btn.serialize = false;       // 不写进工作流文件
+      
+      console.log("CreateImageEditNode 控件添加完成");
     };
   },
 });

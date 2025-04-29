@@ -10,6 +10,8 @@ from typing import List, Dict, Any
 
 import requests
 from PIL import Image
+import numpy as np
+import torch
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # 使用环境变量更安全
 
@@ -21,6 +23,11 @@ class CreateImageEditNode:
     RETURN_TYPES = ("IMAGE",)        # 返回一张图（多张时只取第 1 张，自己修改即可）
     FUNCTION = "run"
     VERSION = "0.1.0"
+    DESCRIPTION = """
+Edit or extend images using OpenAI's API (DALL-E-2 and GPT-Image-1 models).
+You can set how many image inputs the node has,
+with the **inputcount** parameter and clicking "Update inputs" button.
+"""
 
     # 最大支持 10 张输入，跟 n 的上限保持一致
     MAX_IMAGES = 10
@@ -43,7 +50,7 @@ class CreateImageEditNode:
                 ),
             },
             "optional": {
-                "mask": ("IMAGE",),
+                "mask": ("MASK",),
                 "model": (["dall-e-2", "gpt-image-1"], {"default": "dall-e-2"}),
                 "n": ("INT", {"default": 1, "min": 1, "max": 10}),
                 "quality": (
@@ -76,13 +83,15 @@ class CreateImageEditNode:
         """把 PIL 图转 base64 字符串，符合 openai 要求"""
         return [base64.b64encode(self._pil_to_bytes(img)).decode("utf-8") for img in images]
 
-    def run(self, **kwargs):
+    def run(self, image_1, prompt, inputcount=1, **kwargs):
         # ---------- 收集所有 image_n ----------
-        images: List[Image.Image] = []
-        for i in range(1, self.MAX_IMAGES + 1):
+        images = []
+        images.append(self._tensor_to_pil(image_1))
+        
+        for i in range(2, self.MAX_IMAGES + 1):
             key = f"image_{i}"
             if key in kwargs and kwargs[key] is not None:
-                images.append(kwargs[key])
+                images.append(self._tensor_to_pil(kwargs[key]))
 
         if not images:
             raise ValueError("至少需要一张 image_x 输入")
@@ -94,7 +103,7 @@ class CreateImageEditNode:
         }
 
         body = {
-            "prompt": kwargs["prompt"],
+            "prompt": prompt,
             "n": kwargs.get("n", 1),
             "response_format": kwargs.get("response_format", "url"),
             "size": kwargs.get("size", "1024x1024"),
@@ -110,7 +119,8 @@ class CreateImageEditNode:
 
         # mask（可选）
         if "mask" in kwargs and kwargs["mask"] is not None:
-            body["mask"] = base64.b64encode(self._pil_to_bytes(kwargs["mask"])).decode("utf-8")
+            mask_pil = self._tensor_to_pil(kwargs["mask"])
+            body["mask"] = base64.b64encode(self._pil_to_bytes(mask_pil)).decode("utf-8")
 
         # ---------- 调用 OpenAI ----------
         url = "https://api.openai.com/v1/images/edits"
@@ -127,5 +137,34 @@ class CreateImageEditNode:
             img = Image.open(io.BytesIO(img_bytes))
         else:  # "b64_json"
             img = Image.open(io.BytesIO(base64.b64decode(first_item["b64_json"])))
+            
+        # 转换为 ComfyUI 格式的张量
+        img_tensor = self._pil_to_tensor(img)
+        return (img_tensor,)
+    
+    def _tensor_to_pil(self, image_tensor):
+        """将 ComfyUI 图像张量转换为 PIL 图像"""
+        if len(image_tensor.shape) == 4:
+            # 使用第一张图
+            image_tensor = image_tensor[0]
+            
+        # 确保正确的格式 [3,H,W] -> [H,W,3]
+        i = 255. * image_tensor.cpu().numpy()
+        img = Image.fromarray(np.clip(i.transpose(1, 2, 0), 0, 255).astype(np.uint8))
+        return img
+    
+    def _pil_to_tensor(self, img):
+        """将 PIL 图像转换为 ComfyUI 图像张量"""
+        img_np = np.array(img).astype(np.float32) / 255.0
+        # [H,W,3] -> [3,H,W] 
+        img_np = img_np.transpose(2, 0, 1)
+        return torch.from_numpy(img_np).unsqueeze(0) # 添加批次维度 [1,3,H,W]
 
-        return (img,)
+# 确保节点能被 ComfyUI 注册
+NODE_CLASS_MAPPINGS = {
+    "CreateImageEditNode": CreateImageEditNode,
+}
+
+NODE_DISPLAY_NAME_MAPPINGS = {
+    "CreateImageEditNode": "Edit Image (OpenAI)",
+}
