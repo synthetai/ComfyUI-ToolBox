@@ -42,6 +42,7 @@ class CreateImageNode:
     def generate_image(self, api_key, prompt, model="gpt-image-1", size="1024x1024", quality="auto", style="vivid", 
                       background="auto", moderation="auto", response_format="b64_json", output_format="png", 
                       output_compression=100, n=1, user=""):
+        print(f"got prompt: {prompt}")
         # 验证输入参数
         if not api_key:
             raise ValueError("必须提供 OpenAI API 密钥")
@@ -145,6 +146,7 @@ class CreateImageNode:
             
         print(f"正在请求 OpenAI 生成图像，提示词：{prompt}")
         print(f"使用参数: 模型={model}, 尺寸={size}, 质量={quality}")
+        print(f"请求数据: {json.dumps(request_data, ensure_ascii=False, indent=2)}")
         
         # 重试机制
         max_retries = 3
@@ -153,12 +155,15 @@ class CreateImageNode:
         for retry in range(max_retries):
             try:
                 # 发送 API 请求
+                print(f"发送 API 请求到 {api_url}...")
                 response = requests.post(api_url, headers=headers, json=request_data)
+                print(f"收到响应，状态码: {response.status_code}")
                 
                 # 检查 HTTP 状态码
                 if response.status_code != 200:
                     error_info = response.json() if response.text else {"error": {"message": "未知错误"}}
                     error_message = error_info.get("error", {}).get("message", f"HTTP 错误 {response.status_code}")
+                    print(f"API 错误: {error_message}")
                     
                     # 对于可能的限流或服务器错误进行重试
                     if response.status_code in [429, 500, 502, 503, 504] and retry < max_retries - 1:
@@ -170,28 +175,38 @@ class CreateImageNode:
                         raise Exception(f"OpenAI API 错误 ({response.status_code}): {error_message}")
                 
                 response_data = response.json()
+                print(f"响应数据结构: {list(response_data.keys())}")
+                
+                # 打印 usage 信息（如果有）
+                if "usage" in response_data:
+                    usage = response_data["usage"]
+                    print(f"Token 使用情况: {json.dumps(usage, indent=2)}")
                 
                 # 检查响应数据
                 if "data" not in response_data or len(response_data["data"]) == 0:
                     raise Exception("API 返回的响应中未包含图像数据")
                 
+                print(f"数据项数量: {len(response_data['data'])}")
+                print(f"数据项结构: {list(response_data['data'][0].keys())}")
+                
                 # 处理 API 返回结果
-                if model == "gpt-image-1":
-                    # GPT-Image-1 总是返回 base64 编码的图像
+                if model == "gpt-image-1" or response_format == "b64_json":
+                    # 处理 base64 编码的图像
                     if "b64_json" not in response_data["data"][0]:
                         raise Exception("API 返回的响应未包含 base64 编码的图像数据")
                     
+                    print("处理 base64 编码的图像数据...")
                     image_b64 = response_data["data"][0]["b64_json"]
-                    image_data = base64.b64decode(image_b64)
-                    image = Image.open(io.BytesIO(image_data))
-                elif response_format == "b64_json":
-                    # 如果返回的是 base64 编码的图像
-                    if "b64_json" not in response_data["data"][0]:
-                        raise Exception("API 返回的响应未包含 base64 编码的图像数据")
+                    print(f"Base64 图像数据长度: {len(image_b64)}")
                     
-                    image_b64 = response_data["data"][0]["b64_json"]
-                    image_data = base64.b64decode(image_b64)
-                    image = Image.open(io.BytesIO(image_data))
+                    try:
+                        image_data = base64.b64decode(image_b64)
+                        print(f"解码后的图像数据大小: {len(image_data)} 字节")
+                        image = Image.open(io.BytesIO(image_data))
+                        print(f"解码图像成功，尺寸: {image.size}, 模式: {image.mode}")
+                    except Exception as e:
+                        print(f"图像解码错误: {str(e)}")
+                        raise Exception(f"解码图像失败: {str(e)}")
                 else:
                     # 如果返回的是图像 URL
                     if "url" not in response_data["data"][0]:
@@ -199,42 +214,55 @@ class CreateImageNode:
                     
                     image_url = response_data["data"][0]["url"]
                     print(f"获取到图像 URL: {image_url}")
-                    image_response = requests.get(image_url)
                     
-                    if image_response.status_code != 200:
-                        raise Exception(f"下载图像失败 (HTTP {image_response.status_code})")
-                    
-                    image = Image.open(io.BytesIO(image_response.content))
+                    try:
+                        image_response = requests.get(image_url, timeout=30)
+                        print(f"下载图像，状态码: {image_response.status_code}")
+                        
+                        if image_response.status_code != 200:
+                            raise Exception(f"下载图像失败 (HTTP {image_response.status_code})")
+                        
+                        image = Image.open(io.BytesIO(image_response.content))
+                        print(f"打开图像成功，尺寸: {image.size}, 模式: {image.mode}")
+                    except Exception as e:
+                        print(f"图像下载错误: {str(e)}")
+                        raise Exception(f"下载图像失败: {str(e)}")
                 
                 # 如果有修改后的提示词，则打印出来
                 if "revised_prompt" in response_data["data"][0]:
                     revised_prompt = response_data["data"][0]["revised_prompt"]
                     print(f"OpenAI 修改后的提示词: {revised_prompt}")
                 
-                # 转换为 ComfyUI 支持的图像格式
-                if image.mode == 'RGBA' and background == 'transparent':
-                    # 如果是透明背景的 RGBA 图像，需要特殊处理
-                    # 创建一个白色背景
-                    white_bg = Image.new('RGBA', image.size, (255, 255, 255, 255))
-                    # 将原图与白色背景合成
-                    composite = Image.alpha_composite(white_bg, image)
-                    # 转换为 RGB
-                    image = composite.convert('RGB')
-                else:
-                    # 确保图像为 RGB 模式
-                    image = image.convert("RGB")
+                # 确保图像处于 RGB 模式
+                if image.mode != 'RGB':
+                    print(f"转换图像从 {image.mode} 到 RGB 模式")
+                    image = image.convert('RGB')
                 
-                # 转换为 ComfyUI 格式 - 按照 ComfyUI 的标准
-                image_np = np.array(image).astype(np.float32) / 255.0
+                # ComfyUI 的标准方法
+                print("正在准备转换图像为 ComfyUI 格式...")
                 
-                # 检查图像形状
-                print(f"图像尺寸: {image_np.shape}, 类型: {image_np.dtype}")
+                # 转换为 numpy 数组
+                img_np = np.array(image).astype(np.float32) / 255.0
+                print(f"NumPy 数组形状: {img_np.shape}, 类型: {img_np.dtype}")
                 
-                # ComfyUI 要求图像格式为 [B, H, W, C]
-                images = [image_np]  # 这是 [H, W, C] 格式的列表，符合 ComfyUI 预期
+                # 方法 1：转换为 PyTorch 张量
+                tensor = torch.from_numpy(img_np).permute(2, 0, 1)
+                print(f"最终张量形状: {tensor.shape}, 类型: {tensor.dtype}, 设备: {tensor.device}")
                 
-                print("图像生成成功!")
-                return (images,)
+                # 检查 tensor.cpu() 是否可用
+                try:
+                    _ = tensor.cpu()
+                    print("tensor.cpu() 测试成功")
+                except Exception as e:
+                    print(f"警告: tensor.cpu() 测试失败: {e}")
+                
+                # 方法 2：尝试直接使用 numpy 数组
+                # 为了兼容，我们将使用 tensor 作为输出
+                
+                print(f"图像生成成功! 输出张量形状: {tensor.shape}")
+                
+                # 返回格式与 ComfyUI 兼容
+                return ([tensor],)
                 
             except Exception as e:
                 # 最后一次重试失败，或者是不需要重试的错误
