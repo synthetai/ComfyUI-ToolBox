@@ -4,6 +4,7 @@ import requests
 import io
 import base64
 import numpy as np
+import torch
 from PIL import Image
 import folder_paths
 import time
@@ -217,14 +218,19 @@ class CreateImageNode:
                     composite = Image.alpha_composite(white_bg, image)
                     # 转换为 RGB
                     image_rgb = composite.convert('RGB')
-                    image_tensor = [np.array(image_rgb).astype(np.float32) / 255.0]
+                    # 将 numpy 数组转换为 PyTorch 张量
+                    image_array = np.array(image_rgb).astype(np.float32) / 255.0
+                    image_tensor = torch.from_numpy(image_array).permute(2, 0, 1)
+                    print("图像生成成功!")
+                    return ([image_tensor],)
                 else:
                     # 正常转换为 RGB
                     image = image.convert("RGB")
-                    image_tensor = [np.array(image).astype(np.float32) / 255.0]
-                
-                print("图像生成成功!")
-                return (image_tensor,)
+                    # 将 numpy 数组转换为 PyTorch 张量
+                    image_array = np.array(image).astype(np.float32) / 255.0
+                    image_tensor = torch.from_numpy(image_array).permute(2, 0, 1)
+                    print("图像生成成功!")
+                    return ([image_tensor],)
                 
             except Exception as e:
                 # 最后一次重试失败，或者是不需要重试的错误
