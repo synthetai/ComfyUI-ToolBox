@@ -10,6 +10,8 @@ import folder_paths
 import time
 
 class CreateImageNode:
+    """OpenAI 图像生成节点"""
+    
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -37,7 +39,7 @@ class CreateImageNode:
     FUNCTION = "generate_image"
     CATEGORY = "ToolBox/OpenAI"
 
-    def generate_image(self, api_key, prompt, model="dall-e-3", size="1024x1024", quality="auto", style="vivid", 
+    def generate_image(self, api_key, prompt, model="gpt-image-1", size="1024x1024", quality="auto", style="vivid", 
                       background="auto", moderation="auto", response_format="b64_json", output_format="png", 
                       output_compression=100, n=1, user=""):
         # 验证输入参数
@@ -217,20 +219,22 @@ class CreateImageNode:
                     # 将原图与白色背景合成
                     composite = Image.alpha_composite(white_bg, image)
                     # 转换为 RGB
-                    image_rgb = composite.convert('RGB')
-                    # 将 numpy 数组转换为 PyTorch 张量
-                    image_array = np.array(image_rgb).astype(np.float32) / 255.0
-                    image_tensor = torch.from_numpy(image_array).permute(2, 0, 1)
-                    print("图像生成成功!")
-                    return ([image_tensor],)
+                    image = composite.convert('RGB')
                 else:
-                    # 正常转换为 RGB
+                    # 确保图像为 RGB 模式
                     image = image.convert("RGB")
-                    # 将 numpy 数组转换为 PyTorch 张量
-                    image_array = np.array(image).astype(np.float32) / 255.0
-                    image_tensor = torch.from_numpy(image_array).permute(2, 0, 1)
-                    print("图像生成成功!")
-                    return ([image_tensor],)
+                
+                # 转换为 ComfyUI 格式 - 按照 ComfyUI 的标准
+                image_np = np.array(image).astype(np.float32) / 255.0
+                
+                # 检查图像形状
+                print(f"图像尺寸: {image_np.shape}, 类型: {image_np.dtype}")
+                
+                # ComfyUI 要求图像格式为 [B, H, W, C]
+                images = [image_np]  # 这是 [H, W, C] 格式的列表，符合 ComfyUI 预期
+                
+                print("图像生成成功!")
+                return (images,)
                 
             except Exception as e:
                 # 最后一次重试失败，或者是不需要重试的错误
