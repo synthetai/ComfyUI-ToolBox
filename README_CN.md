@@ -47,18 +47,20 @@ Create Image 节点用于调用 OpenAI 的 API 生成图像，支持 DALL-E 和 
 
 **功能特点：**
 - 解码 base64 图像数据并保存为文件
-- 可选择是否同时将图像输出到 ComfyUI 工作流
-- 当标准图像处理流程出现问题时，可用于存储 OpenAI 生成的图像
+- 自动从文件加载图像并输出到工作流以供进一步处理
+- 正确处理图像格式和 EXIF 方向数据
+- 提取 alpha 通道作为 mask（如果有）
 - 提供详细的调试日志
+- 完全兼容 ComfyUI 的 Preview Image 节点
 
 **节点参数：**
 - `b64_json`: 来自 OpenAI 的 Base64 编码图像数据
 - `filename_prefix`: 保存文件名的前缀（默认为 "openai"）
-- `output_type`: 是否仅保存文件或同时输出到工作流（选项："save", "image"）
 
 **输出：**
 - `filename`: 保存的图像文件路径
-- `image`: 作为 ComfyUI 图像对象的图像（仅当 output_type 为 "image" 时）
+- `image`: 作为 ComfyUI 图像对象的图像（可直接用于预览或进一步处理）
+- `mask`: Alpha 通道 mask（如果图像中存在 alpha 通道，否则返回空 mask）
 
 ### Video Combine
 

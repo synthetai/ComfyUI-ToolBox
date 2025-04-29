@@ -49,18 +49,20 @@ The Save Image node specifically designed to handle and save OpenAI's image data
 
 **Features:**
 - Decodes base64 image data and saves it to a file
-- Can optionally return the image to the ComfyUI workflow
-- Useful for storing OpenAI generated images when the standard image processing pipeline has issues
+- Automatically loads the saved image and outputs it for further processing
+- Properly handles image format and EXIF orientation data
+- Extracts alpha channel as mask (if available)
 - Provides detailed debug logs
+- Fully compatible with ComfyUI's Preview Image node
 
 **Node Parameters:**
 - `b64_json`: Base64-encoded image data from OpenAI
 - `filename_prefix`: Prefix for the saved file name (default: "openai")
-- `output_type`: Whether to just save the file or also output it to the workflow (options: "save", "image")
 
 **Output:**
 - `filename`: Path to the saved image file
-- `image`: The image as a ComfyUI image object (only when output_type is "image")
+- `image`: The image as a ComfyUI image object (ready for preview or further processing)
+- `mask`: Alpha channel mask (if present in the image, otherwise returns an empty mask)
 
 ### Video Combine
 
