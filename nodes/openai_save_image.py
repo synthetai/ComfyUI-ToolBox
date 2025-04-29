@@ -15,6 +15,7 @@ class OpenAISaveImageNode:
             "required": {
                 "b64_json": ("STRING", {"default": "", "multiline": True, "placeholder": "OpenAI API 返回的 base64 编码图像数据"}),
                 "filename_prefix": ("STRING", {"default": "openai"}),
+                "output_dir": ("STRING", {"default": "", "placeholder": "自定义输出目录，留空则使用 ComfyUI 默认输出目录"}),
             }
         }
 
@@ -23,7 +24,7 @@ class OpenAISaveImageNode:
     FUNCTION = "save_image"
     CATEGORY = "ToolBox/OpenAI"
 
-    def save_image(self, b64_json, filename_prefix):
+    def save_image(self, b64_json, filename_prefix, output_dir):
         print(f"接收到 base64 数据，长度: {len(b64_json)}")
         
         try:
@@ -35,8 +36,20 @@ class OpenAISaveImageNode:
             pil_image = Image.open(io.BytesIO(image_data))
             print(f"解码图像成功，尺寸: {pil_image.size}, 模式: {pil_image.mode}")
             
-            # 获取输出目录
-            output_dir = folder_paths.get_output_directory()
+            # 确定输出目录
+            if output_dir and output_dir.strip():
+                # 使用用户指定的目录
+                output_dir = output_dir.strip()
+                if not os.path.isabs(output_dir):
+                    # 如果提供的是相对路径，则相对于 ComfyUI 根目录
+                    output_dir = os.path.join(os.path.dirname(folder_paths.base_path), output_dir)
+                print(f"使用自定义输出目录: {output_dir}")
+            else:
+                # 使用 ComfyUI 默认输出目录
+                output_dir = folder_paths.get_output_directory()
+                print(f"使用默认输出目录: {output_dir}")
+                
+            # 确保目录存在
             os.makedirs(output_dir, exist_ok=True)
             
             # 生成文件名
