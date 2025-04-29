@@ -15,9 +15,6 @@ class OpenAISaveImageNode:
             "required": {
                 "b64_json": ("STRING", {"default": "", "multiline": True, "placeholder": "OpenAI API 返回的 base64 编码图像数据"}),
                 "filename_prefix": ("STRING", {"default": "openai"}),
-            },
-            "optional": {
-                "output_type": (["save", "image"], {"default": "save"}),
             }
         }
 
@@ -26,7 +23,7 @@ class OpenAISaveImageNode:
     FUNCTION = "save_image"
     CATEGORY = "ToolBox/OpenAI"
 
-    def save_image(self, b64_json, filename_prefix, output_type="save"):
+    def save_image(self, b64_json, filename_prefix):
         print(f"接收到 base64 数据，长度: {len(b64_json)}")
         
         try:
@@ -60,24 +57,27 @@ class OpenAISaveImageNode:
             print(f"保存图像到: {filepath}")
             image.save(filepath)
             
-            # 转换为 numpy 数组 (无论是否需要输出到工作流，都创建张量)
+            # 转换为 numpy 数组
             img_np = np.array(image).astype(np.float32) / 255.0
             
-            # 转换为 PyTorch 张量 (CHW 格式)
+            # 转换为 PyTorch 张量 (CHW 格式) - ComfyUI 期望的格式是 [batch, channels, height, width]
             tensor = torch.from_numpy(img_np).permute(2, 0, 1).unsqueeze(0)
             print(f"创建张量形状: {tensor.shape}")
             
-            # 如果需要同时输出到 ComfyUI 工作流
-            if output_type == "image":
-                print(f"输出图像到工作流")
-                return (filepath, tensor)
+            # 确保返回的是 [batch, channels, height, width] 格式
+            if tensor.shape[0] != 1 or tensor.shape[1] != 3:
+                print(f"警告: 张量形状 {tensor.shape} 不符合要求，进行调整")
+                if tensor.dim() == 3:  # [C,H,W]
+                    tensor = tensor.unsqueeze(0)  # 添加批次维度
+                elif tensor.dim() == 4 and tensor.shape[1] != 3:
+                    # 如果是 [1,1,H,W] 或其他不合规格式，调整为 [1,3,H,W]
+                    tensor = tensor.repeat(1, 3, 1, 1) if tensor.shape[1] == 1 else tensor[:,:3]
             
-            # 仅保存文件但仍返回空的图像张量以保持兼容性
-            print(f"仅保存文件，不输出到工作流")
+            print(f"最终输出张量形状: {tensor.shape}")
             return (filepath, tensor)
             
         except Exception as e:
             print(f"图像保存失败: {str(e)}")
             # 创建一个空的 1x3x64x64 张量作为备用
             empty_tensor = torch.zeros((1, 3, 64, 64), dtype=torch.float32)
-            raise Exception(f"保存 OpenAI 图像失败: {str(e)}") 
+            return (f"error: {str(e)}", empty_tensor) 
