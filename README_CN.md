@@ -68,8 +68,9 @@ Create Image 节点用于调用 OpenAI 的 API 生成图像，支持 DALL-E 和 
 Edit Image 节点用于使用 OpenAI 的 API 编辑或扩展现有图像，支持 DALL-E-2 和 GPT-Image-1 模型。
 
 **功能特点：**
-- 接收一个现有图像并根据文本提示词进行修改
-- 使用 GPT-Image-1 模型时支持多图像输入（最多 4 张）
+- 接收现有图像并根据文本提示词进行修改
+- 动态输入接口，可调整图像输入数量（1-4个）
+- 使用 GPT-Image-1 模型时支持最多 4 个独立的图像输入
 - 支持可选掩码来指定需要编辑的区域
 - 支持 DALL-E-2 和 GPT-Image-1 模型
 - 自动处理图像格式转换和尺寸要求
@@ -79,17 +80,27 @@ Edit Image 节点用于使用 OpenAI 的 API 编辑或扩展现有图像，支�
 **节点参数：**
 - 必填参数：
   - `api_key`: OpenAI API 密钥
-  - `image`: 要编辑的输入图像（作为 ComfyUI IMAGE 类型）。对于 GPT-Image-1，可以连接最多 4 张图像；对于 DALL-E-2，只会使用第一张图像
+  - `inputcount`: 显示的图像输入数量（1-4）
+  - `image_1`: 主要输入图像（作为 ComfyUI IMAGE 类型）
   - `prompt`: 期望修改的文本描述（最大长度：GPT-Image-1 为 32000 字符，DALL-E-2 为 1000 字符）
 
 - 可选参数：
+  - `image_2`, `image_3`, `image_4`: 额外的输入图像（根据 inputcount 值显示）
   - `mask`: 可选掩码，用于指定要编辑的区域（掩码中的透明区域表示要修改的区域）
   - `model`: 使用的模型，可选 "gpt-image-1" 或 "dall-e-2"（默认为 "gpt-image-1"）
   - `n`: 生成图像数量，范围 1-10
-  - `size`: 图像尺寸（默认为 "1024x1024"）
+  - `size`: 图像尺寸，不同模型支持不同选项：
+    - GPT-Image-1: "auto", "1024x1024", "1536x1024"（横向）, "1024x1536"（纵向）
+    - DALL-E-2: "256x256", "512x512", "1024x1024"
   - `quality`: 图像质量，选项根据模型而不同（默认为 "auto"）
   - `response_format`: 返回格式，可选 "url" 或 "b64_json"（默认为 "b64_json"）
   - `user`: 用户标识符，用于跟踪和监控
+
+**使用方法：**
+1. 使用 `inputcount` 参数设置所需的图像输入数量
+2. 点击 "Update inputs" 更新节点界面
+3. 将图像连接到显示的图像输入接口
+4. 当使用 DALL-E-2 模型时，无论 inputcount 值如何，只会使用第一张图像
 
 **输出：**
 - `image`: 编辑后的图像，作为 ComfyUI 中的图像对象返回

@@ -17,14 +17,18 @@ class CreateImageEditNode:
         return {
             "required": {
                 "api_key": ("STRING", {"default": "", "multiline": False}),
-                "image": ("IMAGE",),
+                "inputcount": ("INT", {"default": 1, "min": 1, "max": 4, "step": 1}),
+                "image_1": ("IMAGE",),
                 "prompt": ("STRING", {"default": "", "multiline": True, "placeholder": "A text description of the desired image(s)"}),
             },
             "optional": {
+                "image_2": ("IMAGE",),
+                "image_3": ("IMAGE",),
+                "image_4": ("IMAGE",),
                 "mask": ("MASK",),
                 "model": (["gpt-image-1", "dall-e-2"], {"default": "gpt-image-1"}),
                 "n": ("INT", {"default": 1, "min": 1, "max": 10}),
-                "size": (["1024x1024", "512x512", "256x256", "auto"], {"default": "1024x1024"}),
+                "size": (["auto", "1024x1024", "1536x1024", "1024x1536", "512x512", "256x256"], {"default": "1024x1024"}),
                 "quality": (["auto", "standard", "high", "medium", "low"], {"default": "auto"}),
                 "response_format": (["url", "b64_json"], {"default": "b64_json"}),
                 "user": ("STRING", {"default": "", "multiline": False, "placeholder": "A unique identifier representing your end-user"})
@@ -35,9 +39,15 @@ class CreateImageEditNode:
     RETURN_NAMES = ("image", "b64_json",)
     FUNCTION = "edit_image"
     CATEGORY = "ToolBox/OpenAI"
+    DESCRIPTION = """
+Edit or extend images using OpenAI's API (DALL-E-2 and GPT-Image-1 models).
+You can set how many image inputs the node has (1-4),
+with the **inputcount** parameter and clicking "Update inputs".
+Note: DALL-E-2 only supports a single input image.
+"""
 
-    def edit_image(self, api_key, image, prompt, mask=None, model="gpt-image-1", n=1, size="1024x1024", 
-                  quality="auto", response_format="b64_json", user=""):
+    def edit_image(self, api_key, inputcount, image_1, prompt, mask=None, model="gpt-image-1", n=1, size="1024x1024", 
+                   quality="auto", response_format="b64_json", user="", **kwargs):
         print(f"图像编辑, prompt: {prompt}")
         
         # 验证输入参数
@@ -53,6 +63,16 @@ class CreateImageEditNode:
         elif model == "dall-e-2" and len(prompt) > 1000:
             raise ValueError(f"DALL-E-2 模型的提示词最大长度为 1000 字符，当前长度为 {len(prompt)}")
         
+        # 验证size参数与模型的兼容性
+        valid_sizes = {
+            "gpt-image-1": ["auto", "1024x1024", "1536x1024", "1024x1536"],
+            "dall-e-2": ["256x256", "512x512", "1024x1024"]
+        }
+        
+        if size not in valid_sizes.get(model, []):
+            print(f"警告: 尺寸 {size} 与模型 {model} 不兼容，将使用默认尺寸")
+            size = "1024x1024"
+            
         # 验证模型特定参数
         if model == "dall-e-2" and n > 1:
             print(f"注意: 当前 n={n}，DALL-E-2 可以生成多张图像")
@@ -64,22 +84,32 @@ class CreateImageEditNode:
         # 准备存储所有图像路径
         image_paths = []
         
-        # 对于 DALL-E-2，只能使用一张输入图像
-        if model == "dall-e-2" and image.shape[0] > 1:
-            print(f"警告: DALL-E-2 模型仅支持一张输入图像，将只使用第一张图像")
-            image_count = 1
-        else:
-            # 对于 GPT-Image-1，最多支持 4 张输入图像
-            image_count = min(4, image.shape[0])
-            if image.shape[0] > 4 and model == "gpt-image-1":
-                print(f"警告: GPT-Image-1 模型最多支持 4 张输入图像，将只使用前 4 张图像")
+        # 收集所有提供的图像
+        images = [image_1]
+        for i in range(2, inputcount + 1):
+            if f"image_{i}" in kwargs and kwargs[f"image_{i}"] is not None and kwargs[f"image_{i}"].shape[0] > 0:
+                images.append(kwargs[f"image_{i}"])
         
-        print(f"使用 {image_count} 张输入图像")
+        # 对于 DALL-E-2，只能使用一张输入图像
+        if model == "dall-e-2" and len(images) > 1:
+            print(f"警告: DALL-E-2 模型仅支持一张输入图像，将只使用第一张图像")
+            images = images[:1]
+        
+        # 对于 GPT-Image-1，最多支持 4 张输入图像
+        if model == "gpt-image-1" and len(images) > 4:
+            print(f"警告: GPT-Image-1 模型最多支持 4 张输入图像，将只使用前 4 张图像")
+            images = images[:4]
+        
+        print(f"使用 {len(images)} 张输入图像")
         
         # 处理所有输入图像
-        for i in range(image_count):
+        for i, img in enumerate(images):
+            # 确保图像是一个批次中的第一张
+            if img.shape[0] > 1:
+                print(f"警告: 图像 {i+1} 包含多个批次，仅使用第一个")
+            
             # 获取当前图像张量
-            image_tensor = image[i]
+            image_tensor = img[0]
             
             # 将 tensor 转换为 numpy 数组 [0,1] -> [0,255]
             image_np = (image_tensor.cpu().numpy() * 255).astype(np.uint8)

@@ -70,8 +70,9 @@ The Save Image node specifically designed to handle and save OpenAI's image data
 The Edit Image node allows you to edit or extend existing images using OpenAI's API, supporting both DALL-E-2 and GPT-Image-1 models.
 
 **Features:**
-- Takes an existing image and modifies it based on a text prompt
-- Support for multiple input images (up to 4) when using GPT-Image-1 model
+- Takes existing images and modifies them based on a text prompt
+- Dynamic input interface with adjustable number of image inputs (1-4)
+- Support for up to 4 separate input images when using GPT-Image-1 model
 - Optional mask support to specify areas to be edited
 - Supports both DALL-E-2 and GPT-Image-1 models
 - Handles image format conversion and size requirements automatically
@@ -81,17 +82,27 @@ The Edit Image node allows you to edit or extend existing images using OpenAI's 
 **Node Parameters:**
 - Required Parameters:
   - `api_key`: OpenAI API key
-  - `image`: Input image(s) to be edited (as ComfyUI IMAGE type). For GPT-Image-1, you can connect up to 4 images; for DALL-E-2, only the first image will be used
+  - `inputcount`: Number of image inputs to display (1-4)
+  - `image_1`: Primary input image to be edited (as ComfyUI IMAGE type)
   - `prompt`: Text description of the desired modifications (max length: 32000 chars for GPT-Image-1, 1000 chars for DALL-E-2)
 
 - Optional Parameters:
+  - `image_2`, `image_3`, `image_4`: Additional input images (shown based on inputcount value)
   - `mask`: Optional mask to specify which areas to edit (transparent areas in the mask indicate regions to modify)
   - `model`: Model to use, one of "gpt-image-1" or "dall-e-2" (default: "gpt-image-1")
   - `n`: Number of images to generate, range 1-10
-  - `size`: Image dimensions (default: "1024x1024")
+  - `size`: Image dimensions with model-specific options:
+    - GPT-Image-1: "auto", "1024x1024", "1536x1024" (landscape), "1024x1536" (portrait)
+    - DALL-E-2: "256x256", "512x512", "1024x1024"
   - `quality`: Image quality, options vary by model (default: "auto")
   - `response_format`: Return format, one of "url" or "b64_json" (default: "b64_json")
   - `user`: User identifier for tracking and monitoring
+
+**Usage:**
+1. Set the desired number of input images using the `inputcount` parameter
+2. Click "Update inputs" to update the node interface
+3. Connect your images to the displayed image inputs
+4. When using DALL-E-2 model, only the first image will be used regardless of inputcount value
 
 **Output:**
 - `image`: The edited image(s), returned as an image object in ComfyUI
