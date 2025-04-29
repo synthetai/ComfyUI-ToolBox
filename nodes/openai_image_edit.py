@@ -28,7 +28,11 @@ class CreateImageEditNode:
                 "size": (["auto", "1024x1024", "1536x1024", "1024x1536", "512x512", "256x256"], {"default": "1024x1024"}),
                 "quality": (["auto", "standard", "high", "medium", "low"], {"default": "auto"}),
                 "response_format": (["url", "b64_json"], {"default": "b64_json"}),
-                "user": ("STRING", {"default": "", "multiline": False, "placeholder": "A unique identifier representing your end-user"})
+                "user": ("STRING", {"default": "", "multiline": False, "placeholder": "A unique identifier representing your end-user"}),
+                # 添加潜在的动态输入
+                "image_2": ("IMAGE",),
+                "image_3": ("IMAGE",),
+                "image_4": ("IMAGE",),
             }
         }
 
