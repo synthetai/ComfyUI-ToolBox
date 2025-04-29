@@ -34,8 +34,8 @@ class CreateImageNode:
             }
         }
 
-    RETURN_TYPES = ("IMAGE",)
-    RETURN_NAMES = ("image",)
+    RETURN_TYPES = ("IMAGE", "STRING",)
+    RETURN_NAMES = ("image", "b64_json",)
     FUNCTION = "generate_image"
     CATEGORY = "ToolBox/OpenAI"
 
@@ -189,6 +189,9 @@ class CreateImageNode:
                 print(f"数据项数量: {len(response_data['data'])}")
                 print(f"数据项结构: {list(response_data['data'][0].keys())}")
                 
+                # 保存 base64 数据以便返回
+                image_b64 = ""
+                
                 # 处理 API 返回结果
                 if model == "gpt-image-1" or response_format == "b64_json":
                     # 处理 base64 编码的图像
@@ -224,6 +227,11 @@ class CreateImageNode:
                         
                         image = Image.open(io.BytesIO(image_response.content))
                         print(f"打开图像成功，尺寸: {image.size}, 模式: {image.mode}")
+                        
+                        # 将图像转换为 base64 以便一致返回
+                        buffer = io.BytesIO()
+                        image.save(buffer, format=output_format.upper())
+                        image_b64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
                     except Exception as e:
                         print(f"图像下载错误: {str(e)}")
                         raise Exception(f"下载图像失败: {str(e)}")
@@ -258,8 +266,8 @@ class CreateImageNode:
                 
                 print(f"图像生成成功! 最终输出张量形状: {tensor.shape}")
                 
-                # 返回格式与 ComfyUI 兼容 - 不使用列表包装
-                return (tensor,)
+                # 返回格式与 ComfyUI 兼容 - 同时返回图像张量和 base64 数据
+                return (tensor, image_b64)
                 
             except Exception as e:
                 # 最后一次重试失败，或者是不需要重试的错误

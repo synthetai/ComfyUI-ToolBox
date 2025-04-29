@@ -41,6 +41,26 @@ The Create Image node allows you to generate images using OpenAI's API, supporti
 
 **Output:**
 - `image`: The generated image, returned as an image object in ComfyUI
+- `b64_json`: The base64-encoded image data that can be passed to the Save Image node
+
+### Save Image (OpenAI)
+
+The Save Image node specifically designed to handle and save OpenAI's image data.
+
+**Features:**
+- Decodes base64 image data and saves it to a file
+- Can optionally return the image to the ComfyUI workflow
+- Useful for storing OpenAI generated images when the standard image processing pipeline has issues
+- Provides detailed debug logs
+
+**Node Parameters:**
+- `b64_json`: Base64-encoded image data from OpenAI
+- `filename_prefix`: Prefix for the saved file name (default: "openai")
+- `output_type`: Whether to just save the file or also output it to the workflow (options: "save", "image")
+
+**Output:**
+- `filename`: Path to the saved image file
+- `image`: The image as a ComfyUI image object (only when output_type is "image")
 
 ### Video Combine
 
