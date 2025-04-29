@@ -245,24 +245,21 @@ class CreateImageNode:
                 img_np = np.array(image).astype(np.float32) / 255.0
                 print(f"NumPy 数组形状: {img_np.shape}, 类型: {img_np.dtype}")
                 
-                # 方法 1：转换为 PyTorch 张量
-                tensor = torch.from_numpy(img_np).permute(2, 0, 1)
+                # 转换为 PyTorch 张量并设置正确的维度顺序 (CHW)
+                tensor = torch.from_numpy(img_np).permute(2, 0, 1).unsqueeze(0)
                 print(f"最终张量形状: {tensor.shape}, 类型: {tensor.dtype}, 设备: {tensor.device}")
                 
-                # 检查 tensor.cpu() 是否可用
-                try:
-                    _ = tensor.cpu()
-                    print("tensor.cpu() 测试成功")
-                except Exception as e:
-                    print(f"警告: tensor.cpu() 测试失败: {e}")
+                # 验证张量格式
+                if tensor.dim() != 4 or tensor.shape[1] != 3:
+                    print(f"警告: 张量形状不符合 ComfyUI 要求，调整中...")
+                    # 确保是 [批次, 通道, 高度, 宽度] 格式
+                    if tensor.dim() == 3 and tensor.shape[0] == 3:  # [C,H,W] 格式
+                        tensor = tensor.unsqueeze(0)  # 添加批次维度变成 [1,C,H,W]
                 
-                # 方法 2：尝试直接使用 numpy 数组
-                # 为了兼容，我们将使用 tensor 作为输出
+                print(f"图像生成成功! 最终输出张量形状: {tensor.shape}")
                 
-                print(f"图像生成成功! 输出张量形状: {tensor.shape}")
-                
-                # 返回格式与 ComfyUI 兼容
-                return ([tensor],)
+                # 返回格式与 ComfyUI 兼容 - 不使用列表包装
+                return (tensor,)
                 
             except Exception as e:
                 # 最后一次重试失败，或者是不需要重试的错误
