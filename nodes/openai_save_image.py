@@ -60,19 +60,24 @@ class OpenAISaveImageNode:
             print(f"保存图像到: {filepath}")
             image.save(filepath)
             
+            # 转换为 numpy 数组 (无论是否需要输出到工作流，都创建张量)
+            img_np = np.array(image).astype(np.float32) / 255.0
+            
+            # 转换为 PyTorch 张量 (CHW 格式)
+            tensor = torch.from_numpy(img_np).permute(2, 0, 1).unsqueeze(0)
+            print(f"创建张量形状: {tensor.shape}")
+            
             # 如果需要同时输出到 ComfyUI 工作流
             if output_type == "image":
-                # 转换为 numpy 数组
-                img_np = np.array(image).astype(np.float32) / 255.0
-                
-                # 转换为 PyTorch 张量 (CHW 格式)
-                tensor = torch.from_numpy(img_np).permute(2, 0, 1).unsqueeze(0)
-                print(f"输出张量形状: {tensor.shape}")
+                print(f"输出图像到工作流")
                 return (filepath, tensor)
             
-            # 仅保存文件
-            return (filepath, None)
+            # 仅保存文件但仍返回空的图像张量以保持兼容性
+            print(f"仅保存文件，不输出到工作流")
+            return (filepath, tensor)
             
         except Exception as e:
             print(f"图像保存失败: {str(e)}")
+            # 创建一个空的 1x3x64x64 张量作为备用
+            empty_tensor = torch.zeros((1, 3, 64, 64), dtype=torch.float32)
             raise Exception(f"保存 OpenAI 图像失败: {str(e)}") 
