@@ -24,7 +24,7 @@ The Create Image node allows you to generate images using OpenAI's API, supporti
   - `prompt`: Text description for image generation (max length varies by model: 32000 chars for GPT-Image-1, 4000 chars for DALL-E-3, 1000 chars for DALL-E-2)
 
 - Optional Parameters:
-  - `model`: Model to use, one of "dall-e-2", "dall-e-3", or "gpt-image-1" (default: "dall-e-3")
+  - `model`: Model to use, one of "dall-e-2", "dall-e-3", or "gpt-image-1" (default: "gpt-image-1")
   - `size`: Image dimensions, with various size options that are validated against the selected model (default: "1024x1024")
   - `quality`: Image quality, options vary by model (default: "auto")
     - GPT-Image-1: "auto", "high", "medium", "low"

@@ -22,7 +22,7 @@ Create Image 节点用于调用 OpenAI 的 API 生成图像，支持 DALL-E 和 
   - `prompt`: 文本描述，用于生成图像（最大长度因模型而异：GPT-Image-1为32000字符，DALL-E-3为4000字符，DALL-E-2为1000字符）
 
 - 可选参数：
-  - `model`: 使用的模型，可选 "dall-e-2"、"dall-e-3" 或 "gpt-image-1"（默认为 "dall-e-3"）
+  - `model`: 使用的模型，可选 "dall-e-2"、"dall-e-3" 或 "gpt-image-1"（默认为 "gpt-image-1"）
   - `size`: 图像尺寸，支持多种尺寸选项，与模型兼容的选项会自动验证（默认为 "1024x1024"）
   - `quality`: 图像质量，可选项根据模型而不同（默认为 "auto"）
     - GPT-Image-1: "auto", "high", "medium", "low"
