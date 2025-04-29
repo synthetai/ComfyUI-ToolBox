@@ -71,7 +71,7 @@ The Edit Image node allows you to edit or extend existing images using OpenAI's 
 
 **Features:**
 - Takes existing images and modifies them based on a text prompt
-- Dynamic input interface with adjustable number of image inputs (1-4)
+- Dynamic input interface with adjustable number of image inputs
 - Support for up to 4 separate input images when using GPT-Image-1 model
 - Optional mask support to specify areas to be edited
 - Supports both DALL-E-2 and GPT-Image-1 models
@@ -82,12 +82,11 @@ The Edit Image node allows you to edit or extend existing images using OpenAI's 
 **Node Parameters:**
 - Required Parameters:
   - `api_key`: OpenAI API key
-  - `inputcount`: Number of image inputs to display (1-4)
+  - `inputcount`: Number of image inputs to display
   - `image_1`: Primary input image to be edited (as ComfyUI IMAGE type)
   - `prompt`: Text description of the desired modifications (max length: 32000 chars for GPT-Image-1, 1000 chars for DALL-E-2)
 
 - Optional Parameters:
-  - `image_2`, `image_3`, `image_4`: Additional input images (shown based on inputcount value)
   - `mask`: Optional mask to specify which areas to edit (transparent areas in the mask indicate regions to modify)
   - `model`: Model to use, one of "gpt-image-1" or "dall-e-2" (default: "gpt-image-1")
   - `n`: Number of images to generate, range 1-10
@@ -99,10 +98,11 @@ The Edit Image node allows you to edit or extend existing images using OpenAI's 
   - `user`: User identifier for tracking and monitoring
 
 **Usage:**
-1. Set the desired number of input images using the `inputcount` parameter
+1. Set the desired number of image inputs using the `inputcount` parameter
 2. Click "Update inputs" to update the node interface
 3. Connect your images to the displayed image inputs
 4. When using DALL-E-2 model, only the first image will be used regardless of inputcount value
+5. For GPT-Image-1 model, up to 4 images can be used; if inputcount is set higher, only the first 4 will be used
 
 **Output:**
 - `image`: The edited image(s), returned as an image object in ComfyUI

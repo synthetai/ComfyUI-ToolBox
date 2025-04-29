@@ -17,14 +17,11 @@ class CreateImageEditNode:
         return {
             "required": {
                 "api_key": ("STRING", {"default": "", "multiline": False}),
-                "inputcount": ("INT", {"default": 1, "min": 1, "max": 4, "step": 1}),
+                "inputcount": ("INT", {"default": 1, "min": 1, "step": 1}),
                 "image_1": ("IMAGE",),
                 "prompt": ("STRING", {"default": "", "multiline": True, "placeholder": "A text description of the desired image(s)"}),
             },
             "optional": {
-                "image_2": ("IMAGE",),
-                "image_3": ("IMAGE",),
-                "image_4": ("IMAGE",),
                 "mask": ("MASK",),
                 "model": (["gpt-image-1", "dall-e-2"], {"default": "gpt-image-1"}),
                 "n": ("INT", {"default": 1, "min": 1, "max": 10}),
@@ -41,9 +38,10 @@ class CreateImageEditNode:
     CATEGORY = "ToolBox/OpenAI"
     DESCRIPTION = """
 Edit or extend images using OpenAI's API (DALL-E-2 and GPT-Image-1 models).
-You can set how many image inputs the node has (1-4),
+You can set how many image inputs the node has,
 with the **inputcount** parameter and clicking "Update inputs".
 Note: DALL-E-2 only supports a single input image.
+GPT-Image-1 supports up to 4 input images.
 """
 
     def edit_image(self, api_key, inputcount, image_1, prompt, mask=None, model="gpt-image-1", n=1, size="1024x1024", 
