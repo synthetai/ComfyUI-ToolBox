@@ -12,6 +12,7 @@ import numpy as np
 import torch
 from PIL import Image
 import folder_paths
+import time
 
 class CreateImageEditNode:
     """调用 OpenAI 图像编辑 API，支持动态输入"""
@@ -81,39 +82,82 @@ class CreateImageEditNode:
             if img_tensor.shape[0] > 1:
                 img_tensor = img_tensor[0:1]
             
-            # 将 tensor 转换为 numpy 数组，并调整到 [0,255] 范围
-            img_np = (img_tensor[0].cpu().numpy() * 255).astype(np.uint8)
+            # 检查图像通道数并进行适当处理
+            tensor = img_tensor[0].cpu()
             
-            # 从 [C,H,W] 转换为 [H,W,C]
-            img_np = np.transpose(img_np, (1, 2, 0))
+            # 打印出张量信息便于调试
+            print(f"图像 {i+1} 张量形状: {tensor.shape}, 类型: {tensor.dtype}")
             
-            # 创建 PIL 图像
-            pil_image = Image.fromarray(img_np)
-            
-            # 保存到临时文件
-            img_path = os.path.join(temp_dir, f"image_{i}.png")
-            pil_image.save(img_path)
-            image_files.append(img_path)
+            # 处理不同形状的张量
+            try:
+                if len(tensor.shape) == 3 and tensor.shape[0] == 3:  # 标准 RGB [3, H, W]
+                    # 将 tensor 转换为 numpy 数组，并调整到 [0,255] 范围
+                    img_np = (tensor.numpy() * 255).astype(np.uint8)
+                    # 从 [C,H,W] 转换为 [H,W,C]
+                    img_np = np.transpose(img_np, (1, 2, 0))
+                    # 创建 PIL 图像
+                    pil_image = Image.fromarray(img_np, 'RGB')
+                elif len(tensor.shape) == 3 and tensor.shape[0] == 1:  # 单通道 [1, H, W]
+                    # 将单通道扩展为三通道（灰度复制到RGB）
+                    img_np = (tensor.numpy()[0] * 255).astype(np.uint8)
+                    pil_image = Image.fromarray(img_np, 'L').convert('RGB')
+                elif len(tensor.shape) == 2:  # 直接是 [H, W]
+                    img_np = (tensor.numpy() * 255).astype(np.uint8)
+                    pil_image = Image.fromarray(img_np, 'L').convert('RGB')
+                else:
+                    raise ValueError(f"不支持的图像形状: {tensor.shape}. 需要 [3,H,W], [1,H,W] 或 [H,W] 格式")
+                
+                print(f"转换后 PIL 图像: 尺寸: {pil_image.size}, 模式: {pil_image.mode}")
+                
+                # 保存到临时文件
+                img_path = os.path.join(temp_dir, f"image_{i}.png")
+                pil_image.save(img_path)
+                image_files.append(img_path)
+            except Exception as e:
+                print(f"处理图像 {i+1} 时出错: {str(e)}")
+                raise ValueError(f"图像 {i+1} 处理失败: {str(e)}")
         
         # 处理掩码（如果有）
         mask_path = None
         if mask is not None:
-            # 转换掩码 tensor 到 PIL
-            if len(mask.shape) > 2:
-                mask = mask.squeeze()
-            
-            # 反转掩码值 (OpenAI 期望透明区域代表要编辑的部分)
-            mask_np = ((1.0 - mask.cpu().numpy()) * 255).astype(np.uint8)
-            mask_pil = Image.fromarray(mask_np, mode='L')
-            
-            # 确保掩码尺寸与第一张图像相同
-            first_img = Image.open(image_files[0])
-            if mask_pil.size != first_img.size:
-                mask_pil = mask_pil.resize(first_img.size)
-            
-            # 保存掩码
-            mask_path = os.path.join(temp_dir, "mask.png")
-            mask_pil.save(mask_path)
+            try:
+                print(f"掩码张量形状: {mask.shape}, 类型: {mask.dtype}")
+                
+                # 转换掩码 tensor 到 PIL
+                mask_tensor = mask
+                
+                # 处理不同形状的掩码张量
+                if len(mask_tensor.shape) == 4:  # [B, C, H, W]
+                    mask_tensor = mask_tensor[0]  # 取第一个批次
+                
+                if len(mask_tensor.shape) == 3 and mask_tensor.shape[0] > 1:  # [C>1, H, W]
+                    print("掩码有多个通道，取第一个通道")
+                    mask_tensor = mask_tensor[0:1]
+                
+                # 确保掩码是2D，挤压掉单一维度
+                if len(mask_tensor.shape) == 3:  # [1, H, W]
+                    mask_tensor = mask_tensor.squeeze(0)
+                
+                # 反转掩码值 (OpenAI 期望透明区域代表要编辑的部分)
+                mask_np = ((1.0 - mask_tensor.cpu().numpy()) * 255).astype(np.uint8)
+                
+                # 创建PIL掩码图像
+                mask_pil = Image.fromarray(mask_np, mode='L')
+                print(f"转换后掩码图像: 尺寸: {mask_pil.size}, 模式: {mask_pil.mode}")
+                
+                # 确保掩码尺寸与第一张图像相同
+                first_img = Image.open(image_files[0])
+                if mask_pil.size != first_img.size:
+                    print(f"调整掩码尺寸从 {mask_pil.size} 到 {first_img.size}")
+                    mask_pil = mask_pil.resize(first_img.size)
+                
+                # 保存掩码
+                mask_path = os.path.join(temp_dir, "mask.png")
+                mask_pil.save(mask_path)
+                
+            except Exception as e:
+                print(f"处理掩码时出错: {str(e)}")
+                print("将继续处理，但不使用掩码")
         
         # 准备 API 请求
         url = "https://api.openai.com/v1/images/edits"
@@ -121,21 +165,8 @@ class CreateImageEditNode:
             "Authorization": f"Bearer {api_key}"
         }
         
-        # 准备表单数据
+        # 准备文件数据
         files = {}
-        data = {
-            "prompt": prompt,
-            "n": n,
-            "size": size,
-            "response_format": response_format,
-            "model": model,
-        }
-        
-        if quality != "auto":
-            data["quality"] = quality
-            
-        if user:
-            data["user"] = user
         
         # 添加图像文件
         if model == "gpt-image-1":
@@ -150,99 +181,170 @@ class CreateImageEditNode:
         if mask_path:
             files['mask'] = ('mask.png', open(mask_path, 'rb'), 'image/png')
         
-        # 发送请求
-        try:
-            print(f"正在调用 OpenAI 编辑图像 API，模型: {model}")
-            response = requests.post(
-                url, 
-                headers=headers,
-                data=data,
-                files=files,
-                timeout=60
-            )
+        # 创建 multipart/form-data 表单数据
+        form_data = {
+            'prompt': prompt,
+            'model': model,
+            'n': str(n),
+            'size': size,
+            'response_format': response_format
+        }
+        
+        if quality != "auto":
+            form_data['quality'] = quality
             
-            # 检查响应
-            if response.status_code != 200:
-                error_msg = f"API 错误: {response.status_code}"
-                try:
-                    error_data = response.json()
-                    if "error" in error_data:
-                        error_msg = f"API 错误: {error_data['error']['message']}"
-                except:
-                    pass
-                raise Exception(error_msg)
-            
-            result = response.json()
-            print(f"API 返回成功，返回 {len(result.get('data', []))} 张图像")
-            
-            # 处理返回的图像
-            images_out = []
-            response_data = ""
-            
-            for item in result.get("data", []):
-                if response_format == "url":
-                    # 下载图像
-                    img_response = requests.get(item["url"], timeout=30)
-                    if img_response.status_code == 200:
-                        img = Image.open(io.BytesIO(img_response.content))
-                        # 保存响应数据（第一张图的 URL）
-                        if not response_data:
-                            response_data = item["url"]
-                    else:
-                        print(f"图像下载失败: HTTP {img_response.status_code}")
-                        continue
-                else:  # b64_json
-                    img = Image.open(io.BytesIO(base64.b64decode(item["b64_json"])))
-                    # 保存响应数据（第一张图的 base64）
-                    if not response_data:
-                        response_data = item["b64_json"]
+        if user:
+            form_data['user'] = user
+        
+        print(f"正在调用 OpenAI 编辑图像 API，模型: {model}")
+        print(f"请求参数: {json.dumps(form_data, ensure_ascii=False, indent=2)}")
+        
+        # 重试机制
+        max_retries = 3
+        retry_delay = 2  # 秒
+        
+        for retry in range(max_retries):
+            try:
+                # 发送请求
+                print(f"发送 API 请求到 {url}...")
+                response = requests.post(
+                    url, 
+                    headers=headers,
+                    data=form_data,
+                    files=files,
+                    timeout=60
+                )
                 
-                # 转换为 ComfyUI 格式的张量
-                img_np = np.array(img.convert("RGB")).astype(np.float32) / 255.0
-                img_tensor = torch.from_numpy(img_np).permute(2, 0, 1).unsqueeze(0)
-                images_out.append(img_tensor)
-            
-            # 清理临时文件
-            for file_path in image_files:
-                try:
-                    os.remove(file_path)
-                except:
-                    pass
-            
-            if mask_path:
-                try:
-                    os.remove(mask_path)
-                except:
-                    pass
-            
-            # 如果没有返回图像，抛出异常
-            if not images_out:
-                raise Exception("API 请求成功但未返回任何图像")
-            
-            # 合并所有图像为一个批量
-            batch = torch.cat(images_out, dim=0)
-            
-            # 返回图像批量和响应信息
-            return (batch, response_data)
-            
-        except Exception as e:
-            print(f"处理失败: {str(e)}")
-            # 清理临时文件
-            for file_path in image_files:
-                try:
-                    os.remove(file_path)
-                except:
-                    pass
-            
-            if mask_path:
-                try:
-                    os.remove(mask_path)
-                except:
-                    pass
-            
-            # 返回空图像和错误信息
-            error_tensor = torch.zeros((1, 3, 512, 512), dtype=torch.float32)
-            return (error_tensor, f"error: {str(e)}")
+                print(f"收到响应，状态码: {response.status_code}")
+                
+                # 检查 HTTP 状态码
+                if response.status_code != 200:
+                    error_info = {}
+                    try:
+                        error_info = response.json() if response.text else {"error": {"message": "未知错误"}}
+                    except:
+                        pass
+                    
+                    error_message = error_info.get("error", {}).get("message", f"HTTP 错误 {response.status_code}")
+                    print(f"API 错误: {error_message}")
+                    
+                    # 对于可能的限流或服务器错误进行重试
+                    if response.status_code in [429, 500, 502, 503, 504] and retry < max_retries - 1:
+                        wait_time = retry_delay * (retry + 1)
+                        print(f"请求失败 ({response.status_code}): {error_message}. 等待 {wait_time} 秒后重试...")
+                        time.sleep(wait_time)
+                        continue
+                    else:
+                        raise Exception(f"OpenAI API 错误 ({response.status_code}): {error_message}")
+                
+                result = response.json()
+                print(f"响应数据结构: {list(result.keys())}")
+                print(f"API 返回成功，返回 {len(result.get('data', []))} 张图像")
+                
+                # 处理返回的图像
+                images_out = []
+                response_data = ""
+                
+                for item in result.get("data", []):
+                    if response_format == "url":
+                        # 下载图像
+                        print(f"从 URL 下载图像: {item['url'][:60]}...")
+                        img_response = requests.get(item["url"], timeout=30)
+                        if img_response.status_code == 200:
+                            img = Image.open(io.BytesIO(img_response.content))
+                            print(f"下载图像成功，尺寸: {img.size}, 模式: {img.mode}")
+                            # 保存响应数据（第一张图的 URL）
+                            if not response_data:
+                                response_data = item["url"]
+                        else:
+                            print(f"图像下载失败: HTTP {img_response.status_code}")
+                            continue
+                    else:  # b64_json
+                        print(f"解码 base64 图像数据，长度: {len(item['b64_json'])}")
+                        img = Image.open(io.BytesIO(base64.b64decode(item["b64_json"])))
+                        print(f"解码图像成功，尺寸: {img.size}, 模式: {img.mode}")
+                        # 保存响应数据（第一张图的 base64）
+                        if not response_data:
+                            response_data = item["b64_json"]
+                    
+                    # 确保图像处于 RGB 模式
+                    if img.mode != 'RGB':
+                        print(f"转换图像从 {img.mode} 到 RGB 模式")
+                        img = img.convert('RGB')
+                    
+                    # 转换为 ComfyUI 格式的张量
+                    img_np = np.array(img).astype(np.float32) / 255.0
+                    img_tensor = torch.from_numpy(img_np).permute(2, 0, 1).unsqueeze(0)
+                    
+                    # 验证张量格式
+                    if img_tensor.dim() != 4 or img_tensor.shape[1] != 3:
+                        print(f"警告: 张量形状不符合 ComfyUI 要求，调整中...")
+                        # 确保是 [批次, 通道, 高度, 宽度] 格式
+                        if img_tensor.dim() == 3 and img_tensor.shape[0] == 3:  # [C,H,W] 格式
+                            img_tensor = img_tensor.unsqueeze(0)  # 添加批次维度变成 [1,C,H,W]
+                    
+                    print(f"最终张量形状: {img_tensor.shape}, 类型: {img_tensor.dtype}")
+                    images_out.append(img_tensor)
+                
+                # 清理临时文件
+                for f in files.values():
+                    if isinstance(f, tuple) and hasattr(f[1], 'close'):
+                        f[1].close()
+                
+                for file_path in image_files:
+                    try:
+                        os.remove(file_path)
+                    except Exception as e:
+                        print(f"清理文件 {file_path} 失败: {str(e)}")
+                
+                if mask_path:
+                    try:
+                        os.remove(mask_path)
+                    except Exception as e:
+                        print(f"清理掩码文件失败: {str(e)}")
+                
+                # 如果没有返回图像，抛出异常
+                if not images_out:
+                    raise Exception("API 请求成功但未返回任何图像")
+                
+                # 合并所有图像为一个批量
+                batch = torch.cat(images_out, dim=0)
+                print(f"成功生成 {batch.shape[0]} 张图像，返回批次张量形状: {batch.shape}")
+                
+                # 返回图像批量和响应信息
+                return (batch, response_data)
+                
+            except Exception as e:
+                # 最后一次重试失败，或者是不需要重试的错误
+                if retry == max_retries - 1:
+                    print(f"图像编辑失败，所有重试都失败: {str(e)}")
+                    
+                    # 清理资源
+                    for f in files.values():
+                        if isinstance(f, tuple) and hasattr(f[1], 'close'):
+                            try:
+                                f[1].close()
+                            except:
+                                pass
+                    
+                    for file_path in image_files:
+                        try:
+                            os.remove(file_path)
+                        except:
+                            pass
+                    
+                    if mask_path:
+                        try:
+                            os.remove(mask_path)
+                        except:
+                            pass
+                    
+                    # 返回空图像和错误信息
+                    error_tensor = torch.zeros((1, 3, 512, 512), dtype=torch.float32)
+                    return (error_tensor, f"error: {str(e)}")
+                else:
+                    print(f"图像编辑出错，将重试 ({retry+1}/{max_retries}): {str(e)}")
+                    time.sleep(retry_delay * (retry + 1))
 
 # 注册节点
 NODE_CLASS_MAPPINGS = {
