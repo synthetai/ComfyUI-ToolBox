@@ -90,22 +90,36 @@ class CreateImageEditNode:
             
             # 处理不同形状的张量
             try:
-                if len(tensor.shape) == 3 and tensor.shape[0] == 3:  # 标准 RGB [3, H, W]
-                    # 将 tensor 转换为 numpy 数组，并调整到 [0,255] 范围
-                    img_np = (tensor.numpy() * 255).astype(np.uint8)
-                    # 从 [C,H,W] 转换为 [H,W,C]
-                    img_np = np.transpose(img_np, (1, 2, 0))
-                    # 创建 PIL 图像
-                    pil_image = Image.fromarray(img_np, 'RGB')
-                elif len(tensor.shape) == 3 and tensor.shape[0] == 1:  # 单通道 [1, H, W]
-                    # 将单通道扩展为三通道（灰度复制到RGB）
-                    img_np = (tensor.numpy()[0] * 255).astype(np.uint8)
-                    pil_image = Image.fromarray(img_np, 'L').convert('RGB')
-                elif len(tensor.shape) == 2:  # 直接是 [H, W]
+                # 检查张量形状和格式
+                if len(tensor.shape) == 3:
+                    # 判断哪一个维度是通道
+                    if tensor.shape[0] == 3:  # [C,H,W] 格式
+                        # CHW 格式，将 tensor 转换为 numpy 数组，并调整到 [0,255] 范围
+                        img_np = (tensor.numpy() * 255).astype(np.uint8)
+                        # 从 [C,H,W] 转换为 [H,W,C]
+                        img_np = np.transpose(img_np, (1, 2, 0))
+                        # 创建 PIL 图像
+                        pil_image = Image.fromarray(img_np, 'RGB')
+                    elif tensor.shape[0] == 1:  # [1,H,W] 格式
+                        # 单通道格式，转为灰度图
+                        img_np = (tensor.numpy()[0] * 255).astype(np.uint8)
+                        pil_image = Image.fromarray(img_np, 'L').convert('RGB')
+                    elif tensor.shape[2] == 3:  # [H,W,C] 格式
+                        # HWC 格式的 RGB 图像
+                        img_np = (tensor.numpy() * 255).astype(np.uint8)
+                        pil_image = Image.fromarray(img_np, 'RGB')
+                    elif tensor.shape[2] == 1:  # [H,W,1] 格式
+                        # HWC 格式的单通道图像
+                        img_np = (tensor.numpy()[:, :, 0] * 255).astype(np.uint8)
+                        pil_image = Image.fromarray(img_np, 'L').convert('RGB')
+                    else:
+                        raise ValueError(f"不支持的 3D 张量形状: {tensor.shape}")
+                elif len(tensor.shape) == 2:  # [H,W] 格式
+                    # 2D 张量，直接是灰度图
                     img_np = (tensor.numpy() * 255).astype(np.uint8)
                     pil_image = Image.fromarray(img_np, 'L').convert('RGB')
                 else:
-                    raise ValueError(f"不支持的图像形状: {tensor.shape}. 需要 [3,H,W], [1,H,W] 或 [H,W] 格式")
+                    raise ValueError(f"不支持的张量维度: {len(tensor.shape)}. 需要 2D 或 3D 张量")
                 
                 print(f"转换后 PIL 图像: 尺寸: {pil_image.size}, 模式: {pil_image.mode}")
                 
