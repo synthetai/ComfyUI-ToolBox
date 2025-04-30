@@ -123,9 +123,15 @@ class CreateImageEditNode:
                 
                 print(f"转换后 PIL 图像: 尺寸: {pil_image.size}, 模式: {pil_image.mode}")
                 
-                # 保存到临时文件
+                # 对于gpt-image-1，确保图像是PNG格式
                 img_path = os.path.join(temp_dir, f"image_{i}.png")
-                pil_image.save(img_path)
+                pil_image.save(img_path, format="PNG")
+                print(f"保存图像到临时文件: {img_path}")
+                
+                # 验证图像有效性
+                with Image.open(img_path) as test_img:
+                    print(f"验证图像: 尺寸: {test_img.size}, 模式: {test_img.mode}")
+                
                 image_files.append(img_path)
             except Exception as e:
                 print(f"处理图像 {i+1} 时出错: {str(e)}")
@@ -179,23 +185,8 @@ class CreateImageEditNode:
             "Authorization": f"Bearer {api_key}"
         }
         
-        # 准备文件数据
+        # 准备文件数据和表单数据
         files = {}
-        
-        # 添加图像文件
-        if model == "gpt-image-1":
-            # 对于 GPT-Image-1，使用 image[] 数组
-            for i, img_path in enumerate(image_files):
-                files[f'image[{i}]'] = (f'image_{i}.png', open(img_path, 'rb'), 'image/png')
-        else:
-            # 对于 DALL-E-2，使用单个 image
-            files['image'] = ('image.png', open(image_files[0], 'rb'), 'image/png')
-        
-        # 添加掩码（如果有）
-        if mask_path:
-            files['mask'] = ('mask.png', open(mask_path, 'rb'), 'image/png')
-        
-        # 创建 multipart/form-data 表单数据
         form_data = {
             'prompt': prompt,
             'model': model,
@@ -213,8 +204,30 @@ class CreateImageEditNode:
         if user:
             form_data['user'] = user
         
+        # 添加图像文件 - 确保按照正确的格式
+        if model == "gpt-image-1":
+            # 对于 GPT-Image-1，使用 image[] 数组
+            for i, img_path in enumerate(image_files):
+                # 确保文件存在并且有效
+                if not os.path.exists(img_path):
+                    raise ValueError(f"图像文件不存在: {img_path}")
+                
+                print(f"准备上传图像 {i+1}: {img_path}")
+                # 使用正确的参数名 'image[]'
+                files[f'image[]'] = (os.path.basename(img_path), open(img_path, 'rb'), 'image/png')
+        else:
+            # 对于 DALL-E-2，使用单个 image
+            print(f"准备上传单个图像: {image_files[0]}")
+            files['image'] = (os.path.basename(image_files[0]), open(image_files[0], 'rb'), 'image/png')
+        
+        # 添加掩码（如果有）
+        if mask_path:
+            with open(mask_path, 'rb') as mask_file:
+                files['mask'] = ('mask.png', mask_file, 'image/png')
+        
         print(f"正在调用 OpenAI 编辑图像 API，模型: {model}")
         print(f"请求参数: {json.dumps(form_data, ensure_ascii=False, indent=2)}")
+        print(f"上传的图像文件: {[k for k in files.keys()]}")
         
         # 重试机制
         max_retries = 3
@@ -222,15 +235,59 @@ class CreateImageEditNode:
         
         for retry in range(max_retries):
             try:
-                # 发送请求
+                # 发送请求 - 使用更符合 API 预期的方式构建请求
                 print(f"发送 API 请求到 {url}...")
-                response = requests.post(
-                    url, 
-                    headers=headers,
-                    data=form_data,
-                    files=files,
-                    timeout=60
-                )
+                
+                # 特殊处理 gpt-image-1 模型的多图像请求
+                if model == "gpt-image-1" and len(image_files) > 1:
+                    # 创建自定义请求
+                    files_list = []
+                    
+                    # 添加常规表单字段
+                    for key, value in form_data.items():
+                        files_list.append(
+                            (key, (None, value))
+                        )
+                    
+                    # 添加多个图像文件
+                    for i, img_path in enumerate(image_files):
+                        with open(img_path, 'rb') as img_file:
+                            image_content = img_file.read()
+                            files_list.append(
+                                ('image[]', (os.path.basename(img_path), image_content, 'image/png'))
+                            )
+                    
+                    # 添加掩码（如果有）
+                    if mask_path:
+                        with open(mask_path, 'rb') as mask_file:
+                            mask_content = mask_file.read()
+                            files_list.append(
+                                ('mask', (os.path.basename(mask_path), mask_content, 'image/png'))
+                            )
+                    
+                    print(f"使用files_list发送请求，包含 {len(files_list)} 个字段")
+                    for field in files_list:
+                        if field[0] != "prompt":  # 不打印提示词，可能太长
+                            print(f" - 字段: {field[0]}, 文件名: {field[1][0] if len(field) > 1 and field[1][0] is not None else '无'}")
+                    
+                    # 发送请求
+                    response = requests.post(
+                        url, 
+                        headers=headers,
+                        files=files_list,
+                        timeout=120  # 增加超时时间，因为可能有多个图像上传
+                    )
+                else:
+                    # 单图像请求更简单
+                    # 把表单数据和文件数据分开发送
+                    print(f"使用常规方式发送请求，文件字段: {list(files.keys())}")
+                    response = requests.post(
+                        url, 
+                        headers=headers,
+                        data=form_data,
+                        files=files,
+                        timeout=120  # 增加超时时间
+                    )
                 
                 print(f"收到响应，状态码: {response.status_code}")
                 
@@ -239,7 +296,9 @@ class CreateImageEditNode:
                     error_info = {}
                     try:
                         error_info = response.json() if response.text else {"error": {"message": "未知错误"}}
+                        print(f"错误响应内容: {json.dumps(error_info, ensure_ascii=False, indent=2)}")
                     except:
+                        print(f"无法解析错误响应: {response.text[:200]}")
                         pass
                     
                     error_message = error_info.get("error", {}).get("message", f"HTTP 错误 {response.status_code}")
@@ -323,8 +382,11 @@ class CreateImageEditNode:
                 
                 # 清理临时文件
                 for f in files.values():
-                    if isinstance(f, tuple) and hasattr(f[1], 'close'):
-                        f[1].close()
+                    if isinstance(f, tuple) and len(f) > 1 and hasattr(f[1], 'close'):
+                        try:
+                            f[1].close()
+                        except Exception as e:
+                            print(f"关闭文件句柄失败: {str(e)}")
                 
                 for file_path in image_files:
                     try:
@@ -356,11 +418,11 @@ class CreateImageEditNode:
                     
                     # 清理资源
                     for f in files.values():
-                        if isinstance(f, tuple) and hasattr(f[1], 'close'):
+                        if isinstance(f, tuple) and len(f) > 1 and hasattr(f[1], 'close'):
                             try:
                                 f[1].close()
-                            except:
-                                pass
+                            except Exception as e:
+                                print(f"关闭文件句柄失败: {str(e)}")
                     
                     for file_path in image_files:
                         try:
