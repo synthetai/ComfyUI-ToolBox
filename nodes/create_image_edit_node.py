@@ -201,8 +201,11 @@ class CreateImageEditNode:
             'model': model,
             'n': str(n),
             'size': size,
-            'response_format': response_format
         }
+        
+        # response_format 仅在 dall-e-2 模型中受支持
+        if model == "dall-e-2" and response_format:
+            form_data['response_format'] = response_format
         
         if quality != "auto":
             form_data['quality'] = quality
@@ -260,26 +263,44 @@ class CreateImageEditNode:
                 response_data = ""
                 
                 for item in result.get("data", []):
-                    if response_format == "url":
-                        # 下载图像
-                        print(f"从 URL 下载图像: {item['url'][:60]}...")
-                        img_response = requests.get(item["url"], timeout=30)
-                        if img_response.status_code == 200:
-                            img = Image.open(io.BytesIO(img_response.content))
-                            print(f"下载图像成功，尺寸: {img.size}, 模式: {img.mode}")
-                            # 保存响应数据（第一张图的 URL）
-                            if not response_data:
-                                response_data = item["url"]
+                    # gpt-image-1 始终返回 base64 编码的图像
+                    if model == "gpt-image-1" or response_format == "b64_json":
+                        if "b64_json" in item:
+                            print(f"解码 base64 图像数据，长度: {len(item['b64_json'])}")
+                            try:
+                                img_data = base64.b64decode(item["b64_json"])
+                                img = Image.open(io.BytesIO(img_data))
+                                print(f"解码图像成功，尺寸: {img.size}, 模式: {img.mode}")
+                                # 保存响应数据（第一张图的 base64）
+                                if not response_data:
+                                    response_data = item["b64_json"]
+                            except Exception as e:
+                                print(f"图像解码错误: {str(e)}")
+                                continue
                         else:
-                            print(f"图像下载失败: HTTP {img_response.status_code}")
+                            print("API 返回的响应中未包含 base64 编码的图像数据")
                             continue
-                    else:  # b64_json
-                        print(f"解码 base64 图像数据，长度: {len(item['b64_json'])}")
-                        img = Image.open(io.BytesIO(base64.b64decode(item["b64_json"])))
-                        print(f"解码图像成功，尺寸: {img.size}, 模式: {img.mode}")
-                        # 保存响应数据（第一张图的 base64）
-                        if not response_data:
-                            response_data = item["b64_json"]
+                    else:  # dall-e-2 with url format
+                        if "url" in item:
+                            # 下载图像
+                            print(f"从 URL 下载图像: {item['url'][:60]}...")
+                            try:
+                                img_response = requests.get(item["url"], timeout=30)
+                                if img_response.status_code == 200:
+                                    img = Image.open(io.BytesIO(img_response.content))
+                                    print(f"下载图像成功，尺寸: {img.size}, 模式: {img.mode}")
+                                    # 保存响应数据（第一张图的 URL）
+                                    if not response_data:
+                                        response_data = item["url"]
+                                else:
+                                    print(f"图像下载失败: HTTP {img_response.status_code}")
+                                    continue
+                            except Exception as e:
+                                print(f"图像下载错误: {str(e)}")
+                                continue
+                        else:
+                            print("API 返回的响应中未包含图像 URL")
+                            continue
                     
                     # 确保图像处于 RGB 模式
                     if img.mode != 'RGB':
