@@ -45,11 +45,12 @@ class CreateImageEditNode:
                 "quality": (["auto", "standard", "hd", "high", "medium", "low"], {"default": "auto"}),
                 "response_format": (["url", "b64_json"], {"default": "url"}),
                 "user": ("STRING", {"default": "", "multiline": False}),
+                "seed": ("INT", {"default": -1, "min": -1, "max": 2147483647, "step": 1, "description": "用于触发节点重新执行的随机种子，-1 表示随机生成"}),
             }
         }
     
     def edit_image(self, api_key, image_1, prompt, inputcount=1, mask=None, model="dall-e-2", 
-                  n=1, size="1024x1024", quality="auto", response_format="url", user="", **kwargs):
+                  n=1, size="1024x1024", quality="auto", response_format="url", user="", seed=-1, **kwargs):
         """
         调用 OpenAI 图像编辑 API 编辑图像
         """
@@ -228,6 +229,7 @@ class CreateImageEditNode:
         print(f"正在调用 OpenAI 编辑图像 API，模型: {model}")
         print(f"请求参数: {json.dumps(form_data, ensure_ascii=False, indent=2)}")
         print(f"上传的图像文件: {[k for k in files.keys()]}")
+        print(f"ComfyUI seed: {seed}")  # 只打印 seed 值，不发送到 API
         
         # 重试机制
         max_retries = 3

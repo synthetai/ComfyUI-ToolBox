@@ -30,7 +30,8 @@ class CreateImageNode:
                 "output_format": (["png", "jpeg", "webp"], {"default": "png"}),
                 "output_compression": ("INT", {"default": 100, "min": 0, "max": 100, "step": 1}),
                 "n": ("INT", {"default": 1, "min": 1, "max": 10}),
-                "user": ("STRING", {"default": "", "multiline": False, "placeholder": "A unique identifier representing your end-user"})
+                "user": ("STRING", {"default": "", "multiline": False, "placeholder": "A unique identifier representing your end-user"}),
+                "seed": ("INT", {"default": -1, "min": -1, "max": 2147483647, "step": 1, "description": "用于触发节点重新执行的随机种子，-1 表示随机生成"}),
             }
         }
 
@@ -41,7 +42,7 @@ class CreateImageNode:
 
     def generate_image(self, api_key, prompt, model="gpt-image-1", size="1024x1024", quality="auto", style="vivid", 
                       background="auto", moderation="auto", response_format="b64_json", output_format="png", 
-                      output_compression=100, n=1, user=""):
+                      output_compression=100, n=1, user="", seed=-1):
         print(f"got prompt: {prompt}")
         # 验证输入参数
         if not api_key:
@@ -146,6 +147,7 @@ class CreateImageNode:
             
         print(f"正在请求 OpenAI 生成图像，提示词：{prompt}")
         print(f"使用参数: 模型={model}, 尺寸={size}, 质量={quality}")
+        print(f"ComfyUI seed: {seed}")  # 只打印 seed 值，不发送到 API
         print(f"请求数据: {json.dumps(request_data, ensure_ascii=False, indent=2)}")
         
         # 重试机制
