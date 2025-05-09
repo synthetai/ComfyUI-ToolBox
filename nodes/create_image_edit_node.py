@@ -54,6 +54,18 @@ class CreateImageEditNode:
         """
         调用 OpenAI 图像编辑 API 编辑图像
         """
+        print(f"got prompt: {prompt}")
+        
+        # 确保seed是有效的整数值
+        if seed is None:
+            seed = -1
+            
+        try:
+            seed = int(seed)
+        except (TypeError, ValueError):
+            print(f"警告: seed 参数 '{seed}' 无效，使用默认值 -1")
+            seed = -1
+            
         if not api_key:
             raise ValueError("必须提供 OpenAI API 密钥")
         
