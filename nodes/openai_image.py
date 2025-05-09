@@ -146,7 +146,7 @@ class CreateImageNode:
             request_data["user"] = user
             
         print(f"正在请求 OpenAI 生成图像，提示词：{prompt}")
-        print(f"使用参数: 模型={model}, 尺寸={size}, 质量={quality}")
+        print(f"使用参数: 模型={model}, 尺寸={size}, 质量={quality}, 输出格式={output_format}")
         print(f"ComfyUI seed: {seed}")  # 只打印 seed 值，不发送到 API
         print(f"请求数据: {json.dumps(request_data, ensure_ascii=False, indent=2)}")
         

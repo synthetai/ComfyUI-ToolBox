@@ -16,6 +16,9 @@ class OpenAISaveImageNode:
                 "b64_json": ("STRING", {"default": "", "multiline": True, "placeholder": "OpenAI API 返回的 base64 编码图像数据"}),
                 "filename_prefix": ("STRING", {"default": "openai"}),
                 "output_dir": ("STRING", {"default": "", "placeholder": "自定义输出目录，留空则使用 ComfyUI 默认输出目录"}),
+            },
+            "optional": {
+                "output_format": (["png", "webp", "jpeg"], {"default": "png"}),
             }
         }
 
@@ -24,8 +27,9 @@ class OpenAISaveImageNode:
     FUNCTION = "save_image"
     CATEGORY = "ToolBox/OpenAI"
 
-    def save_image(self, b64_json, filename_prefix, output_dir):
+    def save_image(self, b64_json, filename_prefix, output_dir, output_format="png"):
         print(f"接收到 base64 数据，长度: {len(b64_json)}")
+        print(f"输出格式: {output_format}")
         
         try:
             # 解码 base64 数据
@@ -55,7 +59,7 @@ class OpenAISaveImageNode:
             # 生成文件名
             counter = 1
             while True:
-                filename = f"{filename_prefix}_{counter:05d}.png"
+                filename = f"{filename_prefix}_{counter:05d}.{output_format}"
                 filepath = os.path.join(output_dir, filename)
                 if not os.path.exists(filepath):
                     break
@@ -63,7 +67,7 @@ class OpenAISaveImageNode:
                 
             # 保存图像
             print(f"保存图像到: {filepath}")
-            pil_image.save(filepath)
+            pil_image.save(filepath, format=output_format.upper())
             
             # ----- 以下参考 LoadImageJMNodes 的方式重新从文件加载图像 -----
             
