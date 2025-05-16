@@ -20,8 +20,8 @@ class AwsS3UploadNode:
             }
         }
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("s3_file_path",)
+    RETURN_TYPES = ("STRING", "STRING",)
+    RETURN_NAMES = ("s3_file_path", "s3_file_url",)
     FUNCTION = "upload_to_s3"
     CATEGORY = "ToolBox/AWS S3"
 
@@ -77,8 +77,19 @@ class AwsS3UploadNode:
             s3_path = f"s3://{bucket}/{s3_key}"
             print(f"文件上传成功: {s3_path}")
             
-            # 返回S3路径
-            return (s3_path,)
+            # 生成预签名URL，有效期15分钟
+            presigned_url = s3_client.generate_presigned_url(
+                'get_object',
+                Params={
+                    'Bucket': bucket,
+                    'Key': s3_key
+                },
+                ExpiresIn=900  # 15 minutes in seconds
+            )
+            print(f"生成预签名URL，有效期15分钟")
+            
+            # 返回S3路径和预签名URL
+            return (s3_path, presigned_url,)
             
         except ClientError as e:
             error_message = f"S3上传失败: {str(e)}"
