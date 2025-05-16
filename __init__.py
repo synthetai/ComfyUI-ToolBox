@@ -3,6 +3,7 @@ from .nodes.aws_s3_upload import AwsS3UploadNode
 from .nodes.openai_image import CreateImageNode
 from .nodes.openai_save_image import OpenAISaveImageNode
 from .nodes.openai_save_to_file import OpenAI_SaveToFile
+from .nodes.trim_audio_to_length import TrimAudioToLength
 
 # 1. 直接导入节点类和映射
 from .nodes.create_image_edit_node import CreateImageEditNode
@@ -20,6 +21,7 @@ NODE_CLASS_MAPPINGS = {
     "CreateImageNode": CreateImageNode,
     "OpenAISaveImageNode": OpenAISaveImageNode,
     "OpenAI_SaveToFile": OpenAI_SaveToFile,
+    "TrimAudioToLength": TrimAudioToLength,
     
     # 直接添加 CreateImageEditNode
     "CreateImageEditNode": CreateImageEditNode,
@@ -35,6 +37,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "CreateImageNode": "Create Image (OpenAI)",
     "OpenAISaveImageNode": "Save Image (OpenAI)",
     "OpenAI_SaveToFile": "OpenAI SaveToFile",
+    "TrimAudioToLength": "Trim Audio To Length",
     
     # 添加显示名称
     "CreateImageEditNode": "Edit Image (OpenAI)",

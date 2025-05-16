@@ -158,6 +158,25 @@ AWS S3 Upload节点用于将本地文件上传到Amazon S3存储服务中。
 **输出：**
 - `s3_file_path`: 上传后文件在S3中的路径（格式：s3://bucket/path/to/file）
 
+### Trim Audio To Length
+
+Trim Audio To Length节点用于将音频文件裁剪到指定的时长。
+
+**功能特点：**
+- 输入一个音频文件的路径
+- 将音频裁剪到用户指定的时长
+- 如果目标时长超过原始音频长度，则返回原始音频
+- 可自定义输出文件名前缀
+- 裁剪后的音频将保存到ComfyUI的output目录下
+
+**节点参数：**
+- `audio_path`: 输入音频文件的路径
+- `target_duration`: 音频裁剪的目标时长（秒）（范围：0.1至3600.0秒）
+- `filename_prefix`: 输出文件名前缀，默认为"trimmed_audio"
+
+**输出：**
+- `file_path`: 裁剪后音频文件的绝对路径
+
 ## 安装方法
 
 1. 确保您已安装ComfyUI
@@ -209,3 +228,11 @@ pip install -r requirements.txt
 4. 设置父目录路径（可选）和子目录名称（可选）来定义存储结构
 5. 输入要上传的本地文件路径
 6. 运行工作流，获取上传后的S3文件路径 
+
+### Trim Audio To Length节点使用示例
+1. 在ComfyUI工作流中，添加"Trim Audio To Length"节点（在ToolBox/Audio分类下）
+2. 设置输入的音频文件路径
+3. 指定裁剪后音频的目标时长（秒）
+4. 设置输出文件名前缀（可选，默认为"trimmed_audio"）
+5. 运行工作流，获取裁剪后的音频文件路径
+6. 裁剪后的音频将保存在ComfyUI的output目录下，文件名带有递增编号 

@@ -9,4 +9,7 @@ boto3>=1.26.0
 botocore>=1.29.0
 
 # 处理文件路径和网络请求
-requests>=2.27.0 
+requests>=2.27.0
+
+# 音频处理
+ffmpeg-python>=0.2.0 

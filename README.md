@@ -160,6 +160,25 @@ The AWS S3 Upload node uploads local files to Amazon S3 storage service.
 **Output:**
 - `s3_file_path`: S3 path of the uploaded file (format: s3://bucket/path/to/file)
 
+### Trim Audio To Length
+
+The Trim Audio To Length node trims audio files to a specified duration.
+
+**Features:**
+- Takes an audio file path as input
+- Trims the audio to a user-specified duration
+- If target duration exceeds original audio length, returns the original audio
+- Customizable output filename prefix
+- Trimmed audio is saved to ComfyUI's output directory
+
+**Node Parameters:**
+- `audio_path`: Path to the input audio file
+- `target_duration`: Duration in seconds to trim the audio to (range: 0.1 to 3600.0 seconds)
+- `filename_prefix`: Prefix for the output filename, defaults to "trimmed_audio"
+
+**Output:**
+- `file_path`: Absolute path to the trimmed audio file
+
 ## Installation
 
 1. Make sure you have ComfyUI installed
@@ -211,6 +230,14 @@ The main dependencies for this project are listed in `requirements.txt`, includi
 4. Set the parent directory path (optional) and subdirectory name (optional) to define the storage structure
 5. Enter the path of the local file to upload
 6. Run the workflow to get the S3 file path of the uploaded file
+
+### Trim Audio To Length Node Usage
+1. Add the "Trim Audio To Length" node to your ComfyUI workflow (under the ToolBox/Audio category)
+2. Set the path for the input audio file
+3. Specify the target duration in seconds for the trimmed audio
+4. Set the output filename prefix (optional, defaults to "trimmed_audio")
+5. Run the workflow to get the trimmed audio file path
+6. The trimmed audio will be saved in the ComfyUI output directory with an incrementing file number
 
 ## License
 
