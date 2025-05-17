@@ -83,8 +83,18 @@ class AwsS3UploadNode:
             domain = domain.rstrip('/') + '/'
             # 构建文件路径
             file_url_path = file_name
-            if sub_dir_name:
+            
+            # 根据不同情况构建完整URL路径
+            if parent_directory and sub_dir_name:
+                # 如果父目录和子目录都有值
+                file_url_path = f"{parent_directory}/{sub_dir_name}/{file_name}"
+            elif parent_directory:
+                # 只有父目录有值
+                file_url_path = f"{parent_directory}/{file_name}"
+            elif sub_dir_name:
+                # 只有子目录有值
                 file_url_path = f"{sub_dir_name}/{file_name}"
+                
             # 拼接完整URL
             public_url = f"{domain}{file_url_path}"
             print(f"生成公开访问URL: {public_url}")
