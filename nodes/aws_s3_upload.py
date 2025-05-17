@@ -14,6 +14,7 @@ class AwsS3UploadNode:
                 "region": ("STRING", {"default": "us-east-1"}),
                 "parent_directory": ("STRING", {"default": ""}),
                 "file_path": ("STRING", {"default": ""}),
+                "domain": ("STRING", {"default": "https://ggf-video-test.s3.us-east-1.amazonaws.com/"}),
             },
             "optional": {
                 "sub_dir_name": ("STRING", {"default": ""}),
@@ -21,11 +22,11 @@ class AwsS3UploadNode:
         }
 
     RETURN_TYPES = ("STRING", "STRING",)
-    RETURN_NAMES = ("s3_file_path", "s3_file_url",)
+    RETURN_NAMES = ("s3_file_path", "public_url",)
     FUNCTION = "upload_to_s3"
     CATEGORY = "ToolBox/AWS S3"
 
-    def upload_to_s3(self, bucket, access_key, secret_key, region, parent_directory, file_path, sub_dir_name=""):
+    def upload_to_s3(self, bucket, access_key, secret_key, region, parent_directory, file_path, domain, sub_dir_name=""):
         # 检查文件是否存在
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"文件不存在: {file_path}")
@@ -77,19 +78,19 @@ class AwsS3UploadNode:
             s3_path = f"s3://{bucket}/{s3_key}"
             print(f"文件上传成功: {s3_path}")
             
-            # 生成预签名URL，有效期15分钟
-            presigned_url = s3_client.generate_presigned_url(
-                'get_object',
-                Params={
-                    'Bucket': bucket,
-                    'Key': s3_key
-                },
-                ExpiresIn=900  # 15 minutes in seconds
-            )
-            print(f"生成预签名URL，有效期15分钟")
+            # 构建公开访问URL
+            # 确保域名以 / 结尾
+            domain = domain.rstrip('/') + '/'
+            # 构建文件路径
+            file_url_path = file_name
+            if sub_dir_name:
+                file_url_path = f"{sub_dir_name}/{file_name}"
+            # 拼接完整URL
+            public_url = f"{domain}{file_url_path}"
+            print(f"生成公开访问URL: {public_url}")
             
-            # 返回S3路径和预签名URL
-            return (s3_path, presigned_url,)
+            # 返回S3路径和公开访问URL
+            return (s3_path, public_url,)
             
         except ClientError as e:
             error_message = f"S3上传失败: {str(e)}"
