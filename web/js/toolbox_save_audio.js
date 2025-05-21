@@ -1,5 +1,5 @@
-import { app } from "/scripts/app.js";
-import { api } from "/scripts/api.js";
+import { app } from "../../scripts/app.js";
+import { api } from "../../scripts/api.js";
 
 // 注册SaveAudio节点的自定义UI
 app.registerExtension({
@@ -7,6 +7,8 @@ app.registerExtension({
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
         // 检查是否是我们的SaveAudio节点
         if (nodeData.name === "ToolboxSaveAudio") {
+            console.log("注册 ToolboxSaveAudio 节点的UI");
+            
             // 保存原始的onExecuted函数
             const onExecuted = nodeType.prototype.onExecuted;
             
@@ -17,12 +19,18 @@ app.registerExtension({
                     onExecuted.apply(this, arguments);
                 }
                 
+                console.log("ToolboxSaveAudio 节点执行完成", message);
+                
                 // 获取音频文件路径
-                const audioPath = message.output.audio_file;
-                if (!audioPath) return;
+                const audioPath = message.output?.audio_file;
+                if (!audioPath) {
+                    console.warn("未找到音频文件路径");
+                    return;
+                }
                 
                 // 获取音频文件名
                 const fileName = audioPath.split('/').pop();
+                console.log("音频文件名:", fileName);
                 
                 // 创建或更新音频播放器
                 this.createAudioPlayer(audioPath, fileName);
@@ -33,6 +41,7 @@ app.registerExtension({
                 // 获取或创建音频容器
                 let audioContainer = this.audioContainer;
                 if (!audioContainer) {
+                    console.log("创建音频播放器容器");
                     // 创建音频容器
                     audioContainer = document.createElement("div");
                     audioContainer.style.padding = "10px";
@@ -59,9 +68,13 @@ app.registerExtension({
                 const source = document.createElement("source");
                 
                 // 获取音频文件的URL
-                const comfyURL = api.apiURL();
+                let comfyURL = api.apiURL();
+                if (comfyURL.endsWith('/')) {
+                    comfyURL = comfyURL.slice(0, -1);
+                }
                 const fileURL = encodeURIComponent(audioPath);
                 const audioURL = `${comfyURL}/view?filename=${fileURL}&type=output`;
+                console.log("音频URL:", audioURL);
                 
                 source.src = audioURL;
                 source.type = "audio/mp3";
@@ -85,6 +98,7 @@ app.registerExtension({
                 
                 // 尝试加载并播放
                 audio.load();
+                console.log("音频播放器已创建");
             };
         }
     }
