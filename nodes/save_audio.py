@@ -24,7 +24,6 @@ class SaveAudioNode:
     RETURN_NAMES = ("audio_file",)
     FUNCTION = "save_audio"
     CATEGORY = "ToolBox/Audio"
-    OUTPUT_NODE = True
 
     def save_audio(self, audio, filename_prefix, quality="V0"):
         # 获取输出目录
@@ -152,9 +151,6 @@ class SaveAudioNode:
         # 返回时间戳，确保每次都会保存
         import time
         return time.time()
-
-# 配置节点的UI显示
-WEB_DIRECTORY = "./web"
 
 # 注册节点
 NODE_CLASS_MAPPINGS = {
