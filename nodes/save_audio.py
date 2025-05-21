@@ -5,6 +5,9 @@ from scipy.io import wavfile
 import folder_paths
 import json
 import torch
+import tempfile
+import shutil
+from pydub import AudioSegment
 
 class SaveAudioNode:
     @classmethod
@@ -51,17 +54,20 @@ class SaveAudioNode:
                 break
             counter += 1
         
+        # 创建临时文件
+        temp_wav_path = None
+        
         try:
             # 确定质量设置
             quality_settings = {
-                "V0": {"bitrate": 320000},
-                "V1": {"bitrate": 256000},
-                "V2": {"bitrate": 224000},
-                "V3": {"bitrate": 192000},
-                "V4": {"bitrate": 128000}
+                "V0": {"bitrate": 320},
+                "V1": {"bitrate": 256},
+                "V2": {"bitrate": 224},
+                "V3": {"bitrate": 192},
+                "V4": {"bitrate": 128}
             }
             
-            bitrate = quality_settings.get(quality, {"bitrate": 320000})["bitrate"]
+            bitrate = quality_settings.get(quality, {"bitrate": 320})["bitrate"]
             
             # 从AUDIO字典中提取波形数据和采样率
             print(f"音频数据类型: {type(audio)}")
@@ -98,12 +104,30 @@ class SaveAudioNode:
                 waveform = waveform.astype(np.float32)
                 waveform = waveform / max(abs(waveform.max()), abs(waveform.min()))
             
-            # 将音频数据保存为MP3文件
-            print(f"保存音频文件: {filepath}，质量: {quality}，比特率: {bitrate//1000}kbps, 形状: {waveform.shape}")
-            sf.write(filepath, waveform.T, sample_rate, format='mp3', subtype='PCM_16')
+            # 确保数据是float32类型
+            waveform = waveform.astype(np.float32)
             
-            # 创建相对路径用于预览
-            preview_path = os.path.relpath(filepath, os.path.abspath(output_dir))
+            # 确保我们有正确的通道顺序 [samples, channels]
+            if waveform.shape[0] == 2 and waveform.shape[1] > 2:
+                # 如果是 [channels, samples] 格式，转置为 [samples, channels]
+                waveform = waveform.T
+                print(f"转置后的波形形状: {waveform.shape}")
+            
+            # 创建临时wav文件
+            fd, temp_wav_path = tempfile.mkstemp(suffix='.wav')
+            os.close(fd)
+            
+            print(f"创建临时WAV文件: {temp_wav_path}")
+            
+            # 保存为临时WAV文件
+            wavfile.write(temp_wav_path, sample_rate, waveform)
+            
+            # 使用pydub转换为MP3
+            print(f"使用pydub将WAV转换为MP3，比特率: {bitrate}kbps")
+            sound = AudioSegment.from_wav(temp_wav_path)
+            sound.export(filepath, format="mp3", bitrate=f"{bitrate}k")
+            
+            print(f"MP3文件已保存: {filepath}")
             
             # 返回音频文件的绝对路径
             return (os.path.abspath(filepath),)
@@ -114,6 +138,14 @@ class SaveAudioNode:
             import traceback
             traceback.print_exc()
             raise Exception(error_message)
+        finally:
+            # 清理临时文件
+            if temp_wav_path and os.path.exists(temp_wav_path):
+                try:
+                    os.remove(temp_wav_path)
+                    print(f"删除临时WAV文件: {temp_wav_path}")
+                except:
+                    pass
     
     @classmethod
     def IS_CHANGED(cls, audio, filename_prefix, quality="V0"):
