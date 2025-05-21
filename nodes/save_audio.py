@@ -4,6 +4,7 @@ import soundfile as sf
 from scipy.io import wavfile
 import folder_paths
 import json
+import torch
 
 class SaveAudioNode:
     @classmethod
@@ -62,10 +63,44 @@ class SaveAudioNode:
             
             bitrate = quality_settings.get(quality, {"bitrate": 320000})["bitrate"]
             
+            # 从AUDIO字典中提取波形数据和采样率
+            print(f"音频数据类型: {type(audio)}")
+            
+            # 如果是字典类型，提取waveform和sample_rate
+            if isinstance(audio, dict):
+                waveform = audio.get('waveform')
+                sample_rate = audio.get('sample_rate', 44100)
+                print(f"从音频字典中提取数据：采样率 = {sample_rate}")
+            else:
+                waveform = audio
+                sample_rate = 44100
+                print("使用默认采样率: 44100")
+            
+            # 如果是张量，转换为numpy数组
+            if isinstance(waveform, torch.Tensor):
+                # 从张量中提取通道数据
+                # 张量形状可能是 [batch, channels, samples] 或 [channels, samples]
+                if waveform.dim() == 3:
+                    # 取第一个批次
+                    waveform = waveform[0]
+                    
+                # 转换为numpy数组
+                waveform = waveform.cpu().numpy()
+                print(f"转换后的波形形状: {waveform.shape}")
+            
+            # 确保数据是正确的浮点范围 [-1.0, 1.0]
+            if waveform.max() <= 1.0 and waveform.min() >= -1.0:
+                # 已经在正确范围内，不需要调整
+                print("波形数据在正确的范围内 [-1.0, 1.0]")
+            else:
+                # 如果数据在其他范围，将其归一化到 [-1.0, 1.0]
+                print(f"波形数据需要归一化，当前范围: [{waveform.min()}, {waveform.max()}]")
+                waveform = waveform.astype(np.float32)
+                waveform = waveform / max(abs(waveform.max()), abs(waveform.min()))
+            
             # 将音频数据保存为MP3文件
-            # 使用指定的比特率保存
-            print(f"保存音频文件: {filepath}，质量: {quality}，比特率: {bitrate//1000}kbps")
-            sf.write(filepath, audio, 44100, format='mp3', subtype=f'PCM_{bitrate}')
+            print(f"保存音频文件: {filepath}，质量: {quality}，比特率: {bitrate//1000}kbps, 形状: {waveform.shape}")
+            sf.write(filepath, waveform.T, sample_rate, format='mp3', subtype='PCM_16')
             
             # 创建相对路径用于预览
             preview_path = os.path.relpath(filepath, os.path.abspath(output_dir))
@@ -76,6 +111,8 @@ class SaveAudioNode:
         except Exception as e:
             error_message = f"保存音频文件时发生错误: {str(e)}"
             print(error_message)
+            import traceback
+            traceback.print_exc()
             raise Exception(error_message)
     
     @classmethod
