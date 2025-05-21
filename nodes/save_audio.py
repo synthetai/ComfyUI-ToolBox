@@ -154,7 +154,7 @@ class SaveAudioNode:
         return time.time()
 
 # 配置节点的UI显示
-WEB_DIRECTORY = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "web")
+WEB_DIRECTORY = "./web"
 
 # 注册节点
 NODE_CLASS_MAPPINGS = {
