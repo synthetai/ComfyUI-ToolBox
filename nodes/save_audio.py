@@ -63,10 +63,10 @@ class SaveAudioNode:
 
 # 注册节点
 NODE_CLASS_MAPPINGS = {
-    "SaveAudio": SaveAudioNode
+    "ToolboxSaveAudio": SaveAudioNode
 }
 
 # 节点显示名称
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "SaveAudio": "Save Audio"
+    "ToolboxSaveAudio": "Toolbox Save Audio"
 } 
