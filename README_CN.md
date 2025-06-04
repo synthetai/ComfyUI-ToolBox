@@ -86,10 +86,12 @@ Video Combine节点将音频文件与视频文件合并，非常适合作为工�
 - `video_path`: 合并后视频文件的绝对路径
 
 #### Smart Video Combiner
-智能视频合成节点，将多个视频文件智能切片并合成为单个视频，根据音频时长自动调整视频长度。
+智能视频合成节点，从指定目录读取视频文件并智能切片合成为单个视频，根据音频时长自动调整视频长度。
 
 **功能特色：**
-- 支持多个视频文件智能切片合并
+- 自动扫描指定目录中的所有视频文件
+- 按文件名顺序读取和合成视频
+- 支持多种视频格式（MP4、AVI、MOV、MKV、FLV、WMV等）
 - 根据音频时长自动调整最终视频长度
 - 支持多种视频比例（16:9、9:16、1:1等）
 - 提供顺序和随机两种拼接模式
@@ -97,7 +99,7 @@ Video Combine节点将音频文件与视频文件合并，非常适合作为工�
 - 智能尺寸调整，自动添加黑边保持比例
 
 **节点参数：**
-- `video_paths`: 视频文件路径，每行一个（多行文本）
+- `video_directory`: 视频文件目录路径（必需）
 - `audio_file`: 参考音频文件路径
 - `filename_prefix`: 输出文件名前缀
 - `max_clip_duration`: 最大片段时长（秒）
@@ -105,6 +107,7 @@ Video Combine节点将音频文件与视频文件合并，非常适合作为工�
 - `concat_mode`: 拼接模式（sequential顺序、random随机）
 - `transition_mode`: 过渡效果（none、fade_in、fade_out、shuffle）
 - `video_width`/`video_height`: 自定义视频尺寸
+- `file_extensions`: 支持的视频文件扩展名（可自定义）
 
 **输出：**
 - `video_path`: 合成后视频文件的绝对路径
@@ -302,11 +305,18 @@ conda install -c conda-forge moviepy imageio imageio-ffmpeg ffmpeg
 
 ### Smart Video Combiner节点使用示例
 1. 在ComfyUI工作流中，添加"Smart Video Combiner"节点（在ToolBox/Video分类下）
-2. 在`video_paths`参数中输入视频文件路径，每行一个
+2. 在`video_directory`参数中输入包含视频文件的目录路径
 3. 设置参考音频文件路径
 4. 选择视频比例和拼接模式
 5. 配置过渡效果和片段时长
-6. 运行工作流，获取智能合成的视频
+6. （可选）设置支持的视频文件扩展名
+7. 运行工作流，获取智能合成的视频
+
+**注意事项：**
+- 节点会自动按文件名排序读取目录中的视频文件
+- 默认支持 mp4, avi, mov, mkv, flv, wmv 格式
+- 可通过 `file_extensions` 参数自定义支持的文件格式
+- 建议视频文件命名采用数字编号以确保正确的合成顺序（如：001.mp4, 002.mp4...）
 
 ### Video Subtitle Generator节点使用示例
 1. 添加"Video Subtitle Generator"节点
