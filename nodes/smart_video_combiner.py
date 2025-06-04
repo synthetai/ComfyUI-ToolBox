@@ -164,9 +164,14 @@ class SmartVideoCombinerNode:
             
             try:
                 # 加载并处理片段
-                clip = VideoFileClip(subclipped_item['file_path']).subclipped(
+                print(f"  加载视频: {subclipped_item['file_path']}")
+                print(f"  时间段: {subclipped_item['start_time']:.2f}s - {subclipped_item['end_time']:.2f}s")
+                
+                clip = VideoFileClip(subclipped_item['file_path']).subclip(
                     subclipped_item['start_time'], subclipped_item['end_time']
                 )
+                
+                print(f"  片段时长: {clip.duration:.2f}s, 尺寸: {clip.size}")
                 
                 # 调整尺寸
                 clip = self._resize_clip(clip, video_width, video_height)
@@ -177,6 +182,8 @@ class SmartVideoCombinerNode:
                 
                 # 保存临时文件
                 clip_file = os.path.join(output_dir, f"temp-clip-{i+1}.mp4")
+                print(f"  保存临时文件: {clip_file}")
+                
                 clip.write_videofile(clip_file, logger=None, fps=30, codec='libx264')
                 
                 processed_clips.append({
@@ -186,10 +193,16 @@ class SmartVideoCombinerNode:
                 temp_files.append(clip_file)
                 video_duration += clip.duration
                 
+                print(f"  处理完成，累计时长: {video_duration:.2f}s")
+                
                 self._close_clip(clip)
                 
             except Exception as e:
                 print(f"处理片段失败: {str(e)}")
+                print(f"  视频文件: {subclipped_item['file_path']}")
+                print(f"  时间段: {subclipped_item['start_time']:.2f}s - {subclipped_item['end_time']:.2f}s")
+                import traceback
+                traceback.print_exc()
                 continue
         
         # 4. 如果时长不够，循环添加已处理的片段
@@ -346,8 +359,20 @@ class SmartVideoCombinerNode:
                     if file_ext in extensions:
                         video_files.append(file_path)
             
-            # 按文件名排序
-            video_files.sort(key=lambda x: os.path.basename(x).lower())
+            # 自然排序（处理数字文件名）
+            def natural_sort_key(filename):
+                import re
+                # 提取文件名中的数字部分进行排序
+                parts = re.split(r'(\d+)', os.path.basename(filename).lower())
+                # 将数字部分转换为整数，非数字部分保持字符串
+                for i in range(len(parts)):
+                    try:
+                        parts[i] = int(parts[i])
+                    except ValueError:
+                        pass
+                return parts
+            
+            video_files.sort(key=natural_sort_key)
             
         except Exception as e:
             print(f"读取视频目录失败: {str(e)}")
