@@ -393,7 +393,7 @@ class SmartVideoCombinerNode:
         print(f"调整尺寸: 源 {clip_w}x{clip_h} (比例: {clip_ratio:.2f}) -> 目标 {target_width}x{target_height} (比例: {target_ratio:.2f})")
         
         if abs(clip_ratio - target_ratio) < 0.01:  # 比例接近，直接缩放
-            return clip.resize(new_size=(target_width, target_height))
+            return clip.resize((target_width, target_height))
         else:
             # 比例不同，添加黑边
             if clip_ratio > target_ratio:
@@ -409,7 +409,7 @@ class SmartVideoCombinerNode:
                 color=(0, 0, 0)
             ).set_duration(clip.duration)
             
-            clip_resized = clip.resize(new_size=(new_width, new_height)).set_position("center")
+            clip_resized = clip.resize((new_width, new_height)).set_position("center")
             
             return CompositeVideoClip([background, clip_resized])
 

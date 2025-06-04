@@ -221,7 +221,7 @@ class ImageToVideoNode:
         new_height = int(clip_h * scale)
         
         # 调整图片尺寸
-        resized_clip = clip.resize(new_size=(new_width, new_height))
+        resized_clip = clip.resize((new_width, new_height))
         
         # 如果需要，添加黑边使其符合目标尺寸
         if new_width != target_width or new_height != target_height:
