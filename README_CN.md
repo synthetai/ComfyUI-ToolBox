@@ -230,20 +230,55 @@ Trim Audio To Length节点将音频文件裁剪到指定时长。
 
 ## 安装
 
+### 方法一：使用 Conda 安装（推荐）
+
 1. 确保已安装ComfyUI
-2. 确保系统已安装FFmpeg（用于音视频处理）
-3. 将此仓库克隆到ComfyUI的`custom_nodes`目录：
-```
+2. 将此仓库克隆到ComfyUI的`custom_nodes`目录：
+```bash
 cd ComfyUI/custom_nodes
 git clone https://github.com/yourusername/ComfyUI-ToolBox.git
-```
-4. 安装所需的Python依赖：
-```
 cd ComfyUI-ToolBox
+```
+3. 使用conda安装所有依赖：
+```bash
+# 一条命令安装所有依赖（推荐）
+conda install -c conda-forge numpy pillow scipy imageio imageio-ffmpeg ffmpeg soundfile requests boto3 botocore moviepy
+
+# 或者分别安装
+conda install -c conda-forge moviepy ffmpeg
+pip install pydub ffmpeg-python
+```
+
+### 方法二：使用 pip 安装
+
+1. 确保已安装ComfyUI和FFmpeg
+2. 将此仓库克隆到ComfyUI的`custom_nodes`目录：
+```bash
+cd ComfyUI/custom_nodes
+git clone https://github.com/yourusername/ComfyUI-ToolBox.git
+cd ComfyUI-ToolBox
+```
+3. 安装Python依赖：
+```bash
 pip install -r requirements.txt
 ```
-5. 重启ComfyUI
-6. 节点现在应该在ComfyUI界面的"ToolBox"类别下可用
+
+### 快速解决moviepy错误
+
+如果遇到 `ModuleNotFoundError: No module named 'moviepy'` 错误，可以直接运行：
+```bash
+# 使用conda安装moviepy（推荐）
+conda install -c conda-forge moviepy
+
+# 或者同时安装相关依赖
+conda install -c conda-forge moviepy imageio imageio-ffmpeg ffmpeg
+```
+
+**最新修复（2024年）：** 
+如果遇到 `ImportError: cannot import name 'VideoFileClip' from 'moviepy'` 错误，这是因为 MoviePy v2 改变了导入语法。我们已经修复了所有节点文件中的导入问题：
+- 现在使用 `from moviepy.editor import ...` 而不是 `from moviepy import ...`
+- 所有视频处理节点都已更新到 MoviePy v2 兼容的语法
+- 如果您仍然遇到导入问题，请确保安装了最新版本的 moviepy
 
 ## 依赖库
 
@@ -315,4 +350,4 @@ pip install -r requirements.txt
 
 ## 许可证
 
-本项目采用MIT许可证发布。 
+本项目采用MIT许可证发布。

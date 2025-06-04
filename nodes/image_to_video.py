@@ -1,11 +1,13 @@
 import os
 import tempfile
+import shutil
 import folder_paths
 import glob
 import re
-from moviepy import ImageClip, CompositeVideoClip
+from moviepy.editor import VideoFileClip, ImageClip, concatenate_videoclips
 from PIL import Image
 import numpy as np
+import gc
 
 class ImageToVideoNode:
     """
@@ -137,7 +139,7 @@ class ImageToVideoNode:
                 clip = self._apply_zoom_effect(clip, zoom_factor, clip_duration)
             
             # 创建最终视频
-            final_clip = CompositeVideoClip([clip])
+            final_clip = concatenate_videoclips([clip])
             
             # 输出视频
             final_clip.write_videofile(
@@ -180,7 +182,6 @@ class ImageToVideoNode:
                 clips.append(clip)
             
             # 按顺序连接所有剪辑
-            from moviepy import concatenate_videoclips
             final_clip = concatenate_videoclips(clips)
             
             # 输出视频
@@ -224,7 +225,7 @@ class ImageToVideoNode:
         
         # 如果需要，添加黑边使其符合目标尺寸
         if new_width != target_width or new_height != target_height:
-            from moviepy import ColorClip, CompositeVideoClip
+            from moviepy.editor import ColorClip, CompositeVideoClip
             
             # 创建黑色背景
             background = ColorClip(

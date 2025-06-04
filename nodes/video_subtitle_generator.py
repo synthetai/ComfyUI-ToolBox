@@ -4,7 +4,7 @@ import tempfile
 import folder_paths
 import glob
 import re
-from moviepy import VideoFileClip, AudioFileClip, TextClip, CompositeVideoClip, CompositeAudioClip, afx
+from moviepy.editor import VideoFileClip, AudioFileClip, TextClip, CompositeVideoClip, CompositeAudioClip, afx
 from moviepy.video.tools.subtitles import SubtitlesClip
 from PIL import Image, ImageFont, ImageDraw
 import numpy as np

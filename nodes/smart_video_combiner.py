@@ -6,7 +6,7 @@ import subprocess
 import folder_paths
 import glob
 import re
-from moviepy import VideoFileClip, ColorClip, CompositeVideoClip, concatenate_videoclips, AudioFileClip
+from moviepy.editor import VideoFileClip, ColorClip, CompositeVideoClip, concatenate_videoclips, AudioFileClip
 import gc
 
 class SmartVideoCombinerNode:
