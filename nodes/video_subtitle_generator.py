@@ -75,8 +75,32 @@ class VideoSubtitleGeneratorNode:
             
             # 加载主音频
             audio_clip = AudioFileClip(audio_file)
+            
+            # 调整音量
             if voice_volume != 1.0:
                 audio_clip = audio_clip.with_effects([afx.MultiplyVolume(voice_volume)])
+            
+            # 添加背景音乐
+            if bgm_file:
+                bgm_clip = AudioFileClip(bgm_file)
+                
+                # 调整背景音乐音量和长度
+                if bgm_volume != 1.0:
+                    bgm_clip = bgm_clip.with_effects([
+                        afx.MultiplyVolume(bgm_volume)
+                    ])
+                
+                # 如果背景音乐短于视频，循环播放
+                if bgm_clip.duration < video_clip.duration:
+                    bgm_clip = bgm_clip.with_effects([
+                        afx.MultiplyVolume(bgm_volume)
+                    ])
+                    
+                bgm_clip = bgm_clip.set_duration(video_clip.duration)
+                audio_clip = CompositeAudioClip([audio_clip, bgm_clip])
+            
+            # 合成最终视频
+            video_clip = video_clip.set_audio(audio_clip)
             
             # 处理字幕
             if subtitle_enabled:
@@ -94,21 +118,6 @@ class VideoSubtitleGeneratorNode:
                         bg_color, stroke_color, stroke_width, subtitle_position,
                         custom_position, video_width, video_height
                     )
-            
-            # 处理背景音乐
-            if bgm_file and os.path.exists(bgm_file):
-                bgm_clip = AudioFileClip(bgm_file)
-                # 调整背景音乐音量和时长
-                bgm_clip = bgm_clip.with_effects([
-                    afx.MultiplyVolume(bgm_volume),
-                    afx.AudioFadeOut(3),
-                    afx.AudioLoop(duration=video_clip.duration)
-                ])
-                # 合成音频
-                audio_clip = CompositeAudioClip([audio_clip, bgm_clip])
-            
-            # 为视频添加音频
-            video_clip = video_clip.with_audio(audio_clip)
             
             # 输出最终视频
             video_clip.write_videofile(
@@ -247,22 +256,22 @@ class VideoSubtitleGeneratorNode:
         )
         
         # 设置时间
-        text_clip = text_clip.with_start(start_time).with_end(end_time).with_duration(duration)
+        text_clip = text_clip.set_start(start_time).set_end(end_time).set_duration(duration)
         
         # 设置位置
         if subtitle_position == "bottom":
-            text_clip = text_clip.with_position(("center", video_height * 0.9 - text_clip.h))
+            text_clip = text_clip.set_position(("center", video_height * 0.9 - text_clip.h))
         elif subtitle_position == "top":
-            text_clip = text_clip.with_position(("center", video_height * 0.05))
+            text_clip = text_clip.set_position(("center", video_height * 0.05))
         elif subtitle_position == "center":
-            text_clip = text_clip.with_position(("center", "center"))
+            text_clip = text_clip.set_position(("center", "center"))
         elif subtitle_position == "custom":
             margin = 10
             max_y = video_height - text_clip.h - margin
             min_y = margin
             custom_y = (video_height - text_clip.h) * (custom_position / 100)
             custom_y = max(min_y, min(custom_y, max_y))
-            text_clip = text_clip.with_position(("center", custom_y))
+            text_clip = text_clip.set_position(("center", custom_y))
         
         return text_clip
 

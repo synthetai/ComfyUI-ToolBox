@@ -407,9 +407,9 @@ class SmartVideoCombinerNode:
             background = ColorClip(
                 size=(target_width, target_height), 
                 color=(0, 0, 0)
-            ).with_duration(clip.duration)
+            ).set_duration(clip.duration)
             
-            clip_resized = clip.resized(new_size=(new_width, new_height)).with_position("center")
+            clip_resized = clip.resized(new_size=(new_width, new_height)).set_position("center")
             
             return CompositeVideoClip([background, clip_resized])
 

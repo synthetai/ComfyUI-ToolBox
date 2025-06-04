@@ -129,7 +129,7 @@ class ImageToVideoNode:
         
         try:
             # 创建图片剪辑
-            clip = ImageClip(image_path).with_duration(clip_duration).with_position("center")
+            clip = ImageClip(image_path).set_duration(clip_duration).set_position("center")
             
             # 调整图片尺寸
             clip = self._resize_image_clip(clip, output_width, output_height)
@@ -170,7 +170,7 @@ class ImageToVideoNode:
                 print(f"处理图片: {image_path}")
                 
                 # 创建图片剪辑
-                clip = ImageClip(image_path).with_duration(clip_duration).with_position("center")
+                clip = ImageClip(image_path).set_duration(clip_duration).set_position("center")
                 
                 # 调整图片尺寸
                 clip = self._resize_image_clip(clip, output_width, output_height)
@@ -231,10 +231,10 @@ class ImageToVideoNode:
             background = ColorClip(
                 size=(target_width, target_height), 
                 color=(0, 0, 0)
-            ).with_duration(clip.duration)
+            ).set_duration(clip.duration)
             
             # 将调整后的图片居中放置在背景上
-            resized_clip = resized_clip.with_position("center")
+            resized_clip = resized_clip.set_position("center")
             
             # 合成最终剪辑
             return CompositeVideoClip([background, resized_clip])
