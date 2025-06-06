@@ -24,6 +24,7 @@ class SmartVideoCombinerNode:
     - 支持多种视频格式（mp4, avi, mov, mkv, flv, wmv等）
     - 智能切片和随机/顺序拼接模式
     - 多种过渡效果和视频比例支持
+    - 可选择是否将音频添加到视频中（默认不添加）
     - 最小化编码损失，保持最佳画质
     """
     
@@ -37,6 +38,7 @@ class SmartVideoCombinerNode:
                 "max_clip_duration": ("FLOAT", {"default": 5.0, "min": 1.0, "max": 30.0, "step": 0.5}),
                 "aspect_ratio": (["16:9", "9:16", "1:1", "4:3", "3:4"], {"default": "16:9"}),
                 "concat_mode": (["sequential", "random"], {"default": "sequential"}),
+                "add_audio_to_video": ("BOOLEAN", {"default": False}),
             },
             "optional": {
                 "transition_mode": (["none", "fade_in", "fade_out", "crossfade"], {"default": "none"}),
@@ -53,7 +55,7 @@ class SmartVideoCombinerNode:
     CATEGORY = "ToolBox/Video"
 
     def combine_videos(self, video_directory, audio_file, filename_prefix, max_clip_duration,
-                      aspect_ratio, concat_mode, transition_mode="none", 
+                      aspect_ratio, concat_mode, add_audio_to_video, transition_mode="none", 
                       video_width=1920, video_height=1080, file_extensions="mp4,avi,mov,mkv,flv,wmv",
                       video_quality="high"):
         """使用FFmpeg智能合成多个视频文件"""
@@ -105,7 +107,7 @@ class SmartVideoCombinerNode:
             # 使用FFmpeg处理视频
             return self._combine_videos_ffmpeg(
                 video_list, audio_file, audio_duration, target_width, target_height,
-                max_clip_duration, concat_mode, transition_mode, output_path, video_quality
+                max_clip_duration, concat_mode, transition_mode, output_path, video_quality, add_audio_to_video
             )
             
         except Exception as e:
@@ -179,7 +181,7 @@ class SmartVideoCombinerNode:
 
     def _combine_videos_ffmpeg(self, video_paths, audio_file, audio_duration, 
                               video_width, video_height, max_clip_duration, 
-                              concat_mode, transition_mode, output_path, video_quality):
+                              concat_mode, transition_mode, output_path, video_quality, add_audio_to_video):
         """使用FFmpeg合成视频"""
         
         output_dir = os.path.dirname(output_path)
@@ -215,9 +217,14 @@ class SmartVideoCombinerNode:
             print("开始合并视频片段...")
             merged_video = self._concat_segments_ffmpeg(final_segments, temp_dir)
             
-            # 7. 添加音频
-            print("添加音频轨道...")
-            self._add_audio_to_video(merged_video, audio_file, output_path, video_quality)
+            # 7. 添加音频或直接输出
+            if add_audio_to_video:
+                print("添加音频轨道...")
+                self._add_audio_to_video(merged_video, audio_file, output_path, video_quality)
+            else:
+                print("不添加音频，直接输出合并后的视频...")
+                # 将合并后的视频移动到最终输出路径
+                shutil.move(merged_video, output_path)
             
             print(f"视频合成完成: {output_path}")
             return (os.path.abspath(output_path),)
