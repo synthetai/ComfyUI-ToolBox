@@ -24,6 +24,7 @@ class SmartVideoCombinerNode:
     - 支持多种视频格式（mp4, avi, mov, mkv, flv, wmv等）
     - 智能切片和随机/顺序拼接模式
     - 多种过渡效果和视频比例支持
+    - 支持保持原始视频分辨率或自定义比例
     - 可选择是否将音频添加到视频中（默认不添加）
     - 最小化编码损失，保持最佳画质
     """
@@ -36,7 +37,7 @@ class SmartVideoCombinerNode:
                 "audio_file": ("STRING", {"default": ""}),
                 "filename_prefix": ("STRING", {"default": "smart_combined"}),
                 "max_clip_duration": ("FLOAT", {"default": 5.0, "min": 1.0, "max": 30.0, "step": 0.5}),
-                "aspect_ratio": (["16:9", "9:16", "1:1", "4:3", "3:4"], {"default": "16:9"}),
+                "aspect_ratio": (["keep_original", "16:9", "9:16", "1:1", "4:3", "3:4"], {"default": "keep_original"}),
                 "concat_mode": (["sequential", "random"], {"default": "sequential"}),
                 "add_audio_to_video": ("BOOLEAN", {"default": False}),
             },
@@ -93,7 +94,7 @@ class SmartVideoCombinerNode:
         print(f"最大片段时长: {max_clip_duration}秒")
         
         # 解析目标分辨率
-        target_width, target_height = self._parse_resolution(aspect_ratio, video_width, video_height)
+        target_width, target_height = self._parse_resolution(aspect_ratio, video_width, video_height, video_list)
         
         # 获取输出目录
         output_dir = folder_paths.get_output_directory()
@@ -107,7 +108,7 @@ class SmartVideoCombinerNode:
             # 使用FFmpeg处理视频
             return self._combine_videos_ffmpeg(
                 video_list, audio_file, audio_duration, target_width, target_height,
-                max_clip_duration, concat_mode, transition_mode, output_path, video_quality, add_audio_to_video
+                max_clip_duration, concat_mode, transition_mode, output_path, video_quality, add_audio_to_video, aspect_ratio
             )
             
         except Exception as e:
@@ -181,7 +182,7 @@ class SmartVideoCombinerNode:
 
     def _combine_videos_ffmpeg(self, video_paths, audio_file, audio_duration, 
                               video_width, video_height, max_clip_duration, 
-                              concat_mode, transition_mode, output_path, video_quality, add_audio_to_video):
+                              concat_mode, transition_mode, output_path, video_quality, add_audio_to_video, aspect_ratio):
         """使用FFmpeg合成视频"""
         
         output_dir = os.path.dirname(output_path)
@@ -202,7 +203,8 @@ class SmartVideoCombinerNode:
             
             # 3. 批量切片视频
             print("开始批量切片视频...")
-            segment_files = self._batch_cut_segments(segments, temp_dir, video_width, video_height, video_quality)
+            keep_original = (aspect_ratio == "keep_original")
+            segment_files = self._batch_cut_segments(segments, temp_dir, video_width, video_height, video_quality, keep_original)
             
             # 4. 根据音频长度调整片段列表
             print("调整片段列表以匹配音频长度...")
@@ -264,7 +266,7 @@ class SmartVideoCombinerNode:
         
         return segments
 
-    def _batch_cut_segments(self, segments, temp_dir, target_width, target_height, quality):
+    def _batch_cut_segments(self, segments, temp_dir, target_width, target_height, quality, keep_original=False):
         """批量切片视频"""
         segment_files = []
         
@@ -280,14 +282,22 @@ class SmartVideoCombinerNode:
                 '-i', segment['source_path'],
                 '-ss', str(segment['start_time']),
                 '-t', str(segment['duration']),
-                '-vf', f'scale={target_width}:{target_height}:force_original_aspect_ratio=decrease,pad={target_width}:{target_height}:(ow-iw)/2:(oh-ih)/2:black',
+            ]
+            
+            # 如果需要保持原始分辨率，不添加缩放滤镜
+            if not keep_original:
+                cmd.extend(['-vf', f'scale={target_width}:{target_height}:force_original_aspect_ratio=decrease,pad={target_width}:{target_height}:(ow-iw)/2:(oh-ih)/2:black'])
+            
+            cmd.extend([
                 '-c:v', 'libx264',
             ] + quality_params + [
                 '-an',  # 移除音频
                 segment_file
-            ]
+            ])
             
             print(f"切片 {i+1}/{len(segments)}: {os.path.basename(segment['source_path'])} ({segment['start_time']:.1f}s-{segment['end_time']:.1f}s)")
+            if keep_original:
+                print(f"  保持原始分辨率: {segment['source_info']['width']}x{segment['source_info']['height']}")
             
             try:
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
@@ -507,9 +517,19 @@ class SmartVideoCombinerNode:
         else:  # fast
             return ['-preset', 'fast', '-crf', '28']
 
-    def _parse_resolution(self, aspect_ratio, video_width, video_height):
+    def _parse_resolution(self, aspect_ratio, video_width, video_height, video_list=None):
         """解析目标分辨率"""
-        if aspect_ratio == "16:9":
+        if aspect_ratio == "keep_original":
+            # 保持原始视频分辨率，使用第一个视频的分辨率作为基准
+            if video_list and len(video_list) > 0:
+                first_video_info = self._get_video_info(video_list[0])
+                if first_video_info:
+                    print(f"保持原始分辨率: {first_video_info['width']}x{first_video_info['height']}")
+                    return first_video_info['width'], first_video_info['height']
+            # 如果无法获取原始分辨率，使用默认值
+            print(f"无法获取原始分辨率，使用默认分辨率: {video_width}x{video_height}")
+            return video_width, video_height
+        elif aspect_ratio == "16:9":
             return 1920, 1080
         elif aspect_ratio == "9:16":
             return 1080, 1920
