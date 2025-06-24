@@ -6,7 +6,7 @@ from datetime import datetime
 import folder_paths
 import glob
 import re
-from moviepy.editor import VideoFileClip, AudioFileClip, CompositeVideoClip, concatenate_videoclips, vfx
+from moviepy import VideoFileClip, AudioFileClip, CompositeVideoClip, concatenate_videoclips, vfx
 
 class VideoCombineNode:
     @classmethod
