@@ -4,7 +4,7 @@ import shutil
 import folder_paths
 import glob
 import re
-from moviepy.editor import VideoFileClip, ImageClip, concatenate_videoclips
+from moviepy import VideoFileClip, ImageClip, concatenate_videoclips
 from PIL import Image
 import numpy as np
 import gc
@@ -225,7 +225,7 @@ class ImageToVideoNode:
         
         # 如果需要，添加黑边使其符合目标尺寸
         if new_width != target_width or new_height != target_height:
-            from moviepy.editor import ColorClip, CompositeVideoClip
+            from moviepy import ColorClip, CompositeVideoClip
             
             # 创建黑色背景
             background = ColorClip(
