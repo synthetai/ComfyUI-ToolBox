@@ -5,6 +5,7 @@ from .nodes.openai_save_image import OpenAISaveImageNode
 from .nodes.openai_save_to_file import OpenAI_SaveToFile
 from .nodes.trim_audio_to_length import TrimAudioToLength
 from .nodes.save_audio import SaveAudioNode, NODE_CLASS_MAPPINGS as SAVE_AUDIO_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS as SAVE_AUDIO_DISPLAY_MAPPINGS
+from .nodes.save_text_to_file import SaveTextToFileNode, NODE_CLASS_MAPPINGS as SAVE_TEXT_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS as SAVE_TEXT_DISPLAY_MAPPINGS
 
 # 1. 直接导入节点类和映射
 from .nodes.create_image_edit_node import CreateImageEditNode
@@ -28,6 +29,7 @@ NODE_CLASS_MAPPINGS = {
     "OpenAISaveImageNode": OpenAISaveImageNode,
     "OpenAI_SaveToFile": OpenAI_SaveToFile,
     "TrimAudioToLength": TrimAudioToLength,
+    "SaveTextToFileNode": SaveTextToFileNode,
     
     # 直接添加 CreateImageEditNode
     "CreateImageEditNode": CreateImageEditNode,
@@ -36,6 +38,7 @@ NODE_CLASS_MAPPINGS = {
 # 3. 添加从节点导入的其他映射
 NODE_CLASS_MAPPINGS.update(CREATE_IMAGE_EDIT_MAPPINGS)
 NODE_CLASS_MAPPINGS.update(SAVE_AUDIO_MAPPINGS)
+NODE_CLASS_MAPPINGS.update(SAVE_TEXT_MAPPINGS)
 NODE_CLASS_MAPPINGS.update(SMART_VIDEO_MAPPINGS)
 NODE_CLASS_MAPPINGS.update(SUBTITLE_MAPPINGS)
 NODE_CLASS_MAPPINGS.update(IMAGE_VIDEO_MAPPINGS)
@@ -48,6 +51,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "OpenAISaveImageNode": "Save Image (OpenAI)",
     "OpenAI_SaveToFile": "OpenAI SaveToFile",
     "TrimAudioToLength": "Trim Audio To Length",
+    "SaveTextToFileNode": "Save Text To File",
     
     # 添加显示名称
     "CreateImageEditNode": "Edit Image (OpenAI)",
@@ -56,6 +60,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
 # 5. 添加从节点导入的其他显示名称映射
 NODE_DISPLAY_NAME_MAPPINGS.update(CREATE_IMAGE_EDIT_DISPLAY_MAPPINGS)
 NODE_DISPLAY_NAME_MAPPINGS.update(SAVE_AUDIO_DISPLAY_MAPPINGS)
+NODE_DISPLAY_NAME_MAPPINGS.update(SAVE_TEXT_DISPLAY_MAPPINGS)
 NODE_DISPLAY_NAME_MAPPINGS.update(SMART_VIDEO_DISPLAY_MAPPINGS)
 NODE_DISPLAY_NAME_MAPPINGS.update(SUBTITLE_DISPLAY_MAPPINGS)
 NODE_DISPLAY_NAME_MAPPINGS.update(IMAGE_VIDEO_DISPLAY_MAPPINGS)
