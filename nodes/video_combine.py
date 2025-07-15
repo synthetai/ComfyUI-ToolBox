@@ -50,8 +50,8 @@ class VideoCombineNode:
         audio_duration = self._get_duration(audio_file)
         
         if audio_duration <= video_duration:
-            # 如果音频比视频短或相等，直接合并
-            self._merge_audio_video(video_file, audio_file, output_path)
+            # 如果音频比视频短或相等，以音频长度为准，截断视频
+            self._merge_audio_video_with_truncated_video(video_file, audio_file, output_path)
         else:
             # 根据选择的处理方式处理长音频
             if audio_handling == "cut off audio":
@@ -200,6 +200,20 @@ class VideoCombineNode:
         
         # 直接使用ffmpeg将视频和截断的音频合并为一个文件
         # 使用-shortest参数确保输出时长与视频相同，音频将被截断
+        subprocess.run([
+            "ffmpeg", "-y", "-i", video_file, "-i", audio_file,
+            "-map", "0:v", "-map", "1:a", 
+            "-c:v", "copy", "-c:a", "aac",
+            "-shortest", output_file
+        ], check=True)
+    
+    def _merge_audio_video_with_truncated_video(self, video_file, audio_file, output_file):
+        """合并音频与截断后的视频，以音频长度为准"""
+        # 获取音频时长
+        audio_duration = self._get_duration(audio_file)
+        
+        # 直接使用ffmpeg将截断的视频和音频合并为一个文件
+        # 使用-shortest参数确保输出时长与音频相同，视频将被截断
         subprocess.run([
             "ffmpeg", "-y", "-i", video_file, "-i", audio_file,
             "-map", "0:v", "-map", "1:a", 
