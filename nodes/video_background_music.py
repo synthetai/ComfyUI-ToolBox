@@ -71,7 +71,7 @@ class VideoBackgroundMusicNode:
     RETURN_NAMES = ("video_path",)
     FUNCTION = "add_background_music"
     CATEGORY = "ToolBox/Video"
-    DESCRIPTION = "为视频添加背景音乐，保留原视频声音和字幕，支持URL下载和本地文件处理"
+    DESCRIPTION = "为视频添加背景音乐，保留原视频声音和字幕，支持URL下载和本地文件处理。如果不提供音频输入，则直接输出原视频文件路径"
 
     def __init__(self):
         self.base_output_dir = folder_paths.get_output_directory()
@@ -247,10 +247,46 @@ class VideoBackgroundMusicNode:
             if video_url.strip() and video_path.strip():
                 raise ValueError("不能同时提供 video_url 和 video_path，请只选择一个")
             
-            if not audio_url.strip() and not audio_path.strip():
-                raise ValueError("必须提供 audio_url 或 audio_path 中的一个")
+            # 检查是否提供了音频输入
+            has_audio_url = audio_url.strip() != ""
+            has_audio_path = audio_path.strip() != ""
             
-            if audio_url.strip() and audio_path.strip():
+            # 如果没有提供任何音频输入，直接返回原视频路径
+            if not has_audio_url and not has_audio_path:
+                print("未提供音频输入，直接返回原视频文件路径")
+                
+                if video_url.strip():
+                    # 如果提供的是视频URL，需要先下载
+                    output_directory = self._get_output_directory(output_dir)
+                    os.makedirs(output_directory, exist_ok=True)
+                    
+                    parsed_url = urlparse(video_url.strip())
+                    if not parsed_url.scheme or not parsed_url.netloc:
+                        raise ValueError("无效的视频URL格式")
+                    
+                    # 尝试从URL获取文件扩展名
+                    url_path = parsed_url.path
+                    extension = self.get_file_extension(url_path)
+                    
+                    # 生成输出文件名和路径
+                    output_filename, output_path = self.get_next_filename(
+                        output_directory, filename_prefix, extension
+                    )
+                    
+                    if not self.download_file(video_url.strip(), output_path, "视频"):
+                        raise RuntimeError("视频下载失败")
+                    
+                    return (os.path.abspath(output_path),)
+                else:
+                    # 如果提供的是本地路径，直接返回
+                    video_path = video_path.strip()
+                    if not os.path.exists(video_path):
+                        raise FileNotFoundError(f"视频文件不存在: {video_path}")
+                    
+                    return (os.path.abspath(video_path),)
+            
+            # 如果同时提供了两种音频输入，报错
+            if has_audio_url and has_audio_path:
                 raise ValueError("不能同时提供 audio_url 和 audio_path，请只选择一个")
 
             # 获取输出目录
